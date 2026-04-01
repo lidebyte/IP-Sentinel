@@ -26,13 +26,13 @@ if pgrep -f "webhook.py $AGENT_PORT" > /dev/null; then
     exit 0
 fi
 
-# 1. 获取本机原生公网 IPv4
-AGENT_IP=$(curl -4 -s -m 5 api.ip.sb/ip)
+# 1. 获取本机原生公网 IPv4 (强制去除所有不可见换行符和空格)
+AGENT_IP=$(curl -4 -s -m 5 api.ip.sb/ip | tr -d '[:space:]')
 
 if [ -n "$AGENT_IP" ]; then
     # --- [重点升级 2: 智能防打扰注册机制] ---
     LAST_IP=""
-    [ -f "$IP_CACHE" ] && LAST_IP=$(cat "$IP_CACHE")
+    [ -f "$IP_CACHE" ] && LAST_IP=$(cat "$IP_CACHE" | tr -d '[:space:]')
 
     # 只有当这是第一次运行，或者公网 IP 发生变动时，才发送 Telegram 申请
     if [ "$AGENT_IP" != "$LAST_IP" ]; then
