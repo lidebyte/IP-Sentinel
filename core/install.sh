@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ==========================================================
-# 脚本名称: install.sh (IP-Sentinel 分布式边缘节点部署脚本 V5.0)
-# 核心功能: 区域选择、一键卸载、解析冷数据、配置高频调度与 Webhook 守护
+# 脚本名称: install.sh (IP-Sentinel 分布式边缘节点部署脚本 V5.1)
+# 核心功能: 区域选择、一键卸载、解析冷数据、配置高频调度与双重 Webhook 守护
 # ==========================================================
 
 # 你的专属 Forgejo 仓库 Raw 数据直链前缀
@@ -106,7 +106,6 @@ curl -sL "${REPO_RAW_URL}/core/runner.sh" -o "${INSTALL_DIR}/core/runner.sh"
 curl -sL "${REPO_RAW_URL}/core/mod_google.sh" -o "${INSTALL_DIR}/core/mod_google.sh"
 curl -sL "${REPO_RAW_URL}/core/updater.sh" -o "${INSTALL_DIR}/core/updater.sh"
 curl -sL "${REPO_RAW_URL}/core/tg_report.sh" -o "${INSTALL_DIR}/core/tg_report.sh"
-# 【核心替换】下载边缘节点的 Webhook 守护进程
 curl -sL "${REPO_RAW_URL}/core/agent_daemon.sh" -o "${INSTALL_DIR}/core/agent_daemon.sh"
 curl -sL "${REPO_RAW_URL}/core/uninstall.sh" -o "${INSTALL_DIR}/core/uninstall.sh"
 chmod +x ${INSTALL_DIR}/core/*.sh
@@ -128,11 +127,14 @@ if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
     # 每天早上 8 点发送昨天的统计战报
     echo "0 8 * * * ${INSTALL_DIR}/core/tg_report.sh >/dev/null 2>&1" >> /tmp/cron_backup
     
-    # 边缘守护进程看门狗: 检查 agent_daemon.sh (或其拉起的 webhook.py) 是否存活
-    echo "* * * * * pgrep -f webhook.py >/dev/null || nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
+    # 【升级点】双保险守护进程看门狗: 
+    # 1. 保证服务器重启后开机秒唤醒
+    echo "@reboot nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
+    # 2. 保证平时手滑杀掉进程后，1分钟内自动复活 (由于 daemon 脚本内自带 pgrep 防冲突，这里可以直接调用)
+    echo "* * * * * nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
     
     # 安装时立刻启动一次边缘守护进程 (触发注册与 Webhook 监听)
-    pgrep -f webhook.py >/dev/null || nohup bash "${INSTALL_DIR}/core/agent_daemon.sh" >/dev/null 2>&1 &
+    nohup bash "${INSTALL_DIR}/core/agent_daemon.sh" >/dev/null 2>&1 &
 fi
 
 crontab /tmp/cron_backup

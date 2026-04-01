@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # ==========================================================
-# 脚本名称: tg_master.sh (Master 端调度枢纽)
-# 核心功能: 监听 TG、操作 SQLite、向 Agent 发送多维 Webhook 指令
+# 脚本名称: tg_master.sh (Master 端调度枢纽 V1.2)
+# 核心功能: 监听 TG、操作 SQLite、Webhook 调度、僵尸节点清理
 # ==========================================================
 
 CONF="/opt/ip_sentinel_master/master.conf"
@@ -85,13 +85,32 @@ while true; do
 
                 manage:*)
                     TARGET_NODE=${TEXT#*:}
-                    # 【升级点】补齐包含 run、log、report 的复合面板菜单
-                    BTNS="[[{\"text\":\"▶️ 执行深度伪装\",\"callback_data\":\"run:$TARGET_NODE\"}, {\"text\":\"📜 查看实时日志\",\"callback_data\":\"log:$TARGET_NODE\"}], [{\"text\":\"📊 索要统计战报\",\"callback_data\":\"report:$TARGET_NODE\"}, {\"text\":\"⬅️ 返回主列表\",\"callback_data\":\"list_nodes\"}]]"
+                    # 【升级点 1】重构战术面板排版，新增 [剔除失联节点] 按钮，采用 3 行优雅布局
+                    BTNS="[[{\"text\":\"▶️ 执行深度伪装\",\"callback_data\":\"run:$TARGET_NODE\"}, {\"text\":\"📜 查看实时日志\",\"callback_data\":\"log:$TARGET_NODE\"}], [{\"text\":\"📊 索要统计战报\",\"callback_data\":\"report:$TARGET_NODE\"}, {\"text\":\"🗑️ 剔除失联节点\",\"callback_data\":\"del:$TARGET_NODE\"}], [{\"text\":\"⬅️ 返回主列表\",\"callback_data\":\"list_nodes\"}]]"
                     send_ui "$CHAT_ID" "⚙️ **目标锁定**: \`$TARGET_NODE\`\n请选择战术动作：" "$BTNS"
                     ;;
 
+                del:*)
+                    # 【升级点 2】执行数据库硬删除，并自动刷新节点列表
+                    TARGET_NODE=${TEXT#*:}
+                    db_exec "DELETE FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE';"
+                    send_msg "$CHAT_ID" "🗑️ 节点 \`$TARGET_NODE\` 的档案已从司令部彻底销毁！"
+                    
+                    # 删除后自动重新渲染节点列表展示
+                    NODE_LIST=$(db_exec "SELECT node_name FROM nodes WHERE chat_id='$CHAT_ID';")
+                    if [ -z "$NODE_LIST" ]; then
+                        send_msg "$CHAT_ID" "⚠️ 当前司令部已无任何节点挂载。"
+                    else
+                        BTNS="["
+                        for N in $NODE_LIST; do
+                            BTNS="$BTNS[{\"text\":\"🖥️ $N\",\"callback_data\":\"manage:$N\"}],"
+                        done
+                        BTNS="${BTNS%,}]"
+                        send_ui "$CHAT_ID" "🔍 刷新后的节点列表：" "$BTNS"
+                    fi
+                    ;;
+
                 run:*|report:*|log:*)
-                    # 【升级点】合并 Webhook 触发逻辑，智能识别动作类型
                     ACTION_TYPE=$(echo "$TEXT" | cut -d':' -f1)
                     TARGET_NODE=$(echo "$TEXT" | cut -d':' -f2)
                     
@@ -103,13 +122,12 @@ while true; do
                     if [ -n "$AGENT_IP" ] && [ -n "$AGENT_PORT" ]; then
                         send_msg "$CHAT_ID" "⏳ 正在向 \`$TARGET_NODE\` ($AGENT_IP) 下发 [$ACTION_TYPE] 指令，请稍候..."
                         
-                        # 向 Agent 的开放端口发送动态 Webhook 唤醒指令 (如 trigger_run, trigger_log)
+                        # 向 Agent 的开放端口发送动态 Webhook 唤醒指令
                         RESPONSE=$(curl -s -m 5 "http://${AGENT_IP}:${AGENT_PORT}/trigger_${ACTION_TYPE}" || echo "FAILED")
                         
                         if [ "$RESPONSE" == "FAILED" ]; then
                             send_msg "$CHAT_ID" "❌ 指令下发超时或失败！请检查节点公网 IP 或防火墙端口 ($AGENT_PORT) 是否放行。"
                         else
-                            # 只有 run 指令需要主控单独回复确认，log 和 report 会由 Agent 直接将内容发到你的 TG
                             if [ "$ACTION_TYPE" == "run" ]; then
                                 send_msg "$CHAT_ID" "✅ 节点 \`$TARGET_NODE\` 回应: 指令已接收，伪装程序启动。"
                             fi
