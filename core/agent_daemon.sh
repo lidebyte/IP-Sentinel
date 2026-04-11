@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# 脚本名称: agent_daemon.sh (受控节点 Webhook 守护进程 V2.0)
+# 脚本名称: agent_daemon.sh (受控节点 Webhook 守护进程 V3.0.3)
 # 核心功能: 智能防打扰注册、进程自检、模块级路由分发(403拦截)
 # ==========================================================
 
@@ -182,16 +182,18 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 import socket
-# [v3.0.1修复] 自定义支持双栈/IPv6的 Server 类
-class DualStackServer(socketserver.TCPServer):
+# ================== [v3.0.3 变更: 引入多线程模型抵抗 Slowloris 攻击] ==================
+class ThreadedDualStackServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True # 开启端口复用，防止热重启时端口冲突
     address_family = socket.AF_INET6 if socket.has_ipv6 else socket.AF_INET
 
 try:
     bind_addr = "::" if socket.has_ipv6 else ""
-    with DualStackServer((bind_addr, PORT), AgentHandler) as httpd:
+    with ThreadedDualStackServer((bind_addr, PORT), AgentHandler) as httpd:
         httpd.serve_forever()
 except Exception as e:
     sys.exit(1)
+# ====================================================================================
 EOF
 
 # --- [重点升级 3: 真正的静默后台启动] ---
