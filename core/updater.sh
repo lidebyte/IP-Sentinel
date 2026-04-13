@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # ==========================================================
-# 脚本名称: updater.sh (IP-Sentinel V3.1.4 养料注入与维护中枢)
-# 核心功能: 静默更新热数据(指纹/词库/LBS规则)、清理瘦身日志
+# 脚本名称: updater.sh (IP-Sentinel V3.3.0 养料注入与分频调度中枢)
+# 核心功能: 静默更新热搜词/LBS、指纹库错峰调度、强制出站死锁
 # ==========================================================
 
 INSTALL_DIR="/opt/ip_sentinel"
 CONFIG_FILE="${INSTALL_DIR}/config.conf"
-# 你的 GitHub 仓库 Raw 数据直链前缀 (统一标准)
+UA_TIME_FILE="${INSTALL_DIR}/core/.ua_last_update"
+
+# GitHub 仓库 Raw 数据直链前缀
 REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/main"
-# 临时改为私库地址用于测试
-# REPO_RAW_URL="https://git.94211762.xyz/hotyue/IP-Sentinel/raw/branch/main"
 
 # 1. 加载本地冷数据配置
 if [ ! -f "$CONFIG_FILE" ]; then
@@ -26,49 +26,94 @@ log() {
 
 log "Updater" "INFO " "========== 触发后台静默 OTA 热数据更新 =========="
 
-# 3. 容灾机制拉取 UA 指纹池 (强制遵循锚点协议)
-TMP_UA="/tmp/ip_sentinel_ua.txt"
-curl -${IP_PREF:-4} -sL "${REPO_RAW_URL}/data/user_agents.txt" -o "$TMP_UA"
-if [ -s "$TMP_UA" ]; then
-    mv "$TMP_UA" "${INSTALL_DIR}/data/user_agents.txt"
-    log "Updater" "INFO " "✅ 设备指纹池 (User-Agents) 更新成功"
-else
-    log "Updater" "WARN " "❌ UA 池拉取失败，保留本地旧数据防崩溃"
-    rm -f "$TMP_UA"
+# ==========================================================
+# 🛡️ 终极护城河：构建强锚定出站的 curl 请求引擎
+# ==========================================================
+# 基础参数：跟随 install.sh 锁定的协议偏好 (4 或 6)
+CURL_CMD="curl -${IP_PREF:-4} -sL"
+
+# 【防坑核心】如果用户配置了死锁锚点，必须强制绑定网卡，杜绝流量溢出！
+if [ -n "$BIND_IP" ]; then
+    # curl 的 --interface 参数不支持带方括号的 IPv6 地址，必须强行脱壳
+    RAW_BIND_IP=$(echo "$BIND_IP" | tr -d '[]')
+    CURL_CMD="$CURL_CMD --interface $RAW_BIND_IP"
 fi
 
-# 4. 容灾机制拉取当地最新搜索词库
+# ==========================================================
+# 3. 容灾机制拉取 UA 指纹池 (V3.3.0 引入 30 天错峰防惊群逻辑)
+# ==========================================================
+NOW=$(date +%s)
+LAST_UPDATE=0
+
+# 读取上一次更新的时间戳
+if [ -f "$UA_TIME_FILE" ]; then
+    # tr -d 清除可能存在的换行或回车符，防止算术崩溃
+    LAST_UPDATE=$(cat "$UA_TIME_FILE" | tr -d '\r\n')
+fi
+
+# 校验数据合法性，防崩溃
+if ! [[ "$LAST_UPDATE" =~ ^[0-9]+$ ]]; then
+    LAST_UPDATE=0
+fi
+
+DIFF=$((NOW - LAST_UPDATE))
+
+# 距离上次拉取超过 30 天 (2592000 秒)，才执行下载
+if [ "$DIFF" -ge 2592000 ] || [ "$LAST_UPDATE" -eq 0 ]; then
+    TMP_UA="/tmp/ip_sentinel_ua.txt"
+    # 使用重装升级后的 CURL_CMD
+    $CURL_CMD "${REPO_RAW_URL}/data/user_agents.txt" -o "$TMP_UA"
+    
+    if [ -s "$TMP_UA" ]; then
+        mv "$TMP_UA" "${INSTALL_DIR}/data/user_agents.txt"
+        echo "$NOW" > "$UA_TIME_FILE"
+        log "Updater" "INFO " "✅ 设备指纹池 (User-Agents) 30天错峰滚动更新成功"
+    else
+        log "Updater" "WARN " "❌ UA 池拉取失败，保留本地旧数据防崩溃"
+        rm -f "$TMP_UA"
+    fi
+else
+    DAYS_LEFT=$(((2592000 - DIFF) / 86400))
+    log "Updater" "INFO " "⏳ 设备指纹池处于 30 天静默期 (剩余约 ${DAYS_LEFT} 天)，跳过拉取"
+fi
+
+# ==========================================================
+# 4. 容灾机制拉取当地最新搜索词库 (每日高频拉取，保证活体新鲜度)
+# ==========================================================
 TMP_KW="/tmp/ip_sentinel_kw.txt"
-curl -${IP_PREF:-4} -sL "${REPO_RAW_URL}/data/keywords/kw_${REGION_CODE}.txt" -o "$TMP_KW"
+$CURL_CMD "${REPO_RAW_URL}/data/keywords/kw_${REGION_CODE}.txt" -o "$TMP_KW"
+
 if [ -s "$TMP_KW" ]; then
     mv "$TMP_KW" "${INSTALL_DIR}/data/keywords/kw_${REGION_CODE}.txt"
-    log "Updater" "INFO " "✅ 区域搜索词库 (kw_${REGION_CODE}) 更新成功"
+    log "Updater" "INFO " "✅ 区域搜索词库 (kw_${REGION_CODE}) 每日同步成功"
 else
     log "Updater" "WARN " "❌ 搜索词库拉取失败，保留本地旧数据防崩溃"
     rm -f "$TMP_KW"
 fi
 
-# 5. 【V3.1.4 核心升级】自适应拉取本地 LBS 专属 JSON 规则库
-# 利用 find 穿透寻找本地唯一的 json
+# ==========================================================
+# 5. 自适应拉取本地 LBS 专属 JSON 规则库 (每日同步)
+# ==========================================================
 REGION_JSON_FILE=$(find "${INSTALL_DIR}/data/regions" -name "*.json" 2>/dev/null | head -n 1)
 
 if [ -n "$REGION_JSON_FILE" ] && [ -f "$REGION_JSON_FILE" ]; then
-    # 提取本地文件的相对路径 (例如: data/regions/US/CA/San_Jose.json)
     REL_PATH=${REGION_JSON_FILE#*${INSTALL_DIR}/}
     TMP_JSON="/tmp/ip_sentinel_region.json"
     
-    # 按照相同的相对路径去云端拉取更新
-    curl -${IP_PREF:-4} -sL "${REPO_RAW_URL}/${REL_PATH}" -o "$TMP_JSON"
+    $CURL_CMD "${REPO_RAW_URL}/${REL_PATH}" -o "$TMP_JSON"
+    
     if [ -s "$TMP_JSON" ]; then
         mv "$TMP_JSON" "$REGION_JSON_FILE"
-        log "Updater" "INFO " "✅ 核心战区规则库 ($REL_PATH) 更新成功"
+        log "Updater" "INFO " "✅ 核心战区规则库 ($REL_PATH) 每日同步成功"
     else
         log "Updater" "WARN " "❌ 战区规则库拉取失败，保留本地旧数据"
         rm -f "$TMP_JSON"
     fi
 fi
 
+# ==========================================================
 # 6. 日志防满瘦身机制 (保留最近 2000 行)
+# ==========================================================
 if [ -f "$LOG_FILE" ]; then
     tail -n 2000 "$LOG_FILE" > "${LOG_FILE}.tmp"
     mv "${LOG_FILE}.tmp" "$LOG_FILE"
