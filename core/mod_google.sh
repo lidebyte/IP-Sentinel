@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========================================================
-# 脚本名称: mod_google.sh (Google 业务逻辑模块)
+# 脚本名称: mod_google.sh (Google 业务逻辑模块 v3.4.0 版本锚点版)
 # 核心功能: 执行坐标微抖动、模拟真实阅读时长、会话行为拉伸
 # ==========================================================
 
@@ -16,11 +16,15 @@ else
     exit 1
 fi
 
-# 容错机制：如果父进程没有传递 log 函数，则本地定义一个作为 fallback
+# 容错机制：如果父进程没有传递 log 函数，则本地定义一个作为 fallback (v3.4.0 引入版本探针)
 if ! type log >/dev/null 2>&1; then
     log() {
+        # [v3.4.0 核心] 提取当前配置中的版本锚点
+        local local_ver="${AGENT_VERSION:-未知}"
+        
         mkdir -p "${INSTALL_DIR}/logs"
-        printf "[$(date '+%Y-%m-%d %H:%M:%S')] [%-5s] [%-7s] [%s] %s\n" "$2" "$1" "$REGION_CODE" "$3" >> "${INSTALL_DIR}/logs/sentinel.log"
+        # 统一日志格式，注入 [版本号] 追踪标识
+        printf "[$(date '+%Y-%m-%d %H:%M:%S')] [v%-5s] [%-5s] [%-7s] [%s] %s\n" "$local_ver" "$2" "$1" "$REGION_CODE" "$3" >> "${INSTALL_DIR}/logs/sentinel.log"
     }
 fi
 
