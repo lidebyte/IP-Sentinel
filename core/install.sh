@@ -496,7 +496,7 @@ rm -f /tmp/cron_backup
 if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
     # [v3.3.2 修复: 引入 IP 哈希防同名覆盖机制]
     IP_HASH=$(echo "${SAFE_PUBLIC_IP:-127.0.0.1}" | md5sum | cut -c 1-4 | tr 'a-z' 'A-Z')
-    NODE_NAME="$(hostname | cut -c 1-10)_${IP_HASH}"
+    NODE_NAME="$(hostname | cut -c 1-10)-${IP_HASH}"
     
     # ⚠️ 核心修复：提前构造注册暗号，供全新安装与首次架构重组使用
     REG_MSG="#REGISTER#|${REGION_CODE}|${NODE_NAME}|${SAFE_PUBLIC_IP}|${AGENT_PORT}"

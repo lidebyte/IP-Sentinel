@@ -21,7 +21,7 @@ fi
 # 2. 节点元数据抓取 (v3.2.2 协议自适应与多级容灾版)
 # [v3.3.2 修复: 引入 IP 哈希防同名覆盖机制]
 IP_HASH=$(echo "${PUBLIC_IP:-127.0.0.1}" | md5sum | cut -c 1-4 | tr 'a-z' 'A-Z')
-NODE_NAME="$(hostname | cut -c 1-10)_${IP_HASH}"
+NODE_NAME="$(hostname | cut -c 1-10)-${IP_HASH}"
 
 # --- [防线 1: 底层路由锁定与协议自适应] ---
 CURL_BIND_OPT=""
