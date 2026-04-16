@@ -1,0 +1,17 @@
+{
+  "region_name": "Canada - Montreal",
+  "google_module": {
+    "base_lat": 45.5017,
+    "base_lon": -73.5673,
+    "lang_params": "hl=en&gl=CA",
+    "valid_url_suffix": "ca"
+  },
+  "trust_module": {
+    "white_urls": [
+      "https://en.wikipedia.org/wiki/Special:Random",
+      "https://www.cbc.ca/",
+      "https://www.amazon.ca/",
+      "https://www.theweathernetwork.com/ca"
+    ]
+  }
+}
