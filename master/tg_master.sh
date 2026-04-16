@@ -86,8 +86,11 @@ while true; do
             if [[ "$REPLY_TO_TEXT" == *"✏️ 请回复本消息以重命名节点:"* ]]; then
                 # 精准提取被回复消息中的节点主键名
                 TARGET_NODE=$(echo "$REPLY_TO_TEXT" | grep -v "✏️" | grep -v "仅限" | tr -d '\` ' | tr -cd 'a-zA-Z0-9_.-' | head -n 1)
-                # 强清洗用户输入的新名字
-                NEW_ALIAS=$(echo "$TEXT" | tr -cd 'a-zA-Z0-9_ \-\u4e00-\u9fa5' | cut -c 1-20)
+                
+                # [v3.5.2 热修复] 废除 Bash 原生 tr 命令的中文白名单 (不支持 Unicode 会误删中文)。
+                # 改用黑名单策略：仅自动转化下划线，剔除引号、特殊符号和冒号(防止破坏内部路由)，
+                # 将完整的中文原样送入 Base64 编码，最终严格正则清洗交由 Agent 的 Python 引擎处理！
+                NEW_ALIAS=$(echo "$TEXT" | sed 's/_/-/g' | tr -d '"'\''\`\$\|&;<>\n\r:' | cut -c 1-30)
                 
                 if [ -n "$TARGET_NODE" ] && [ -n "$NEW_ALIAS" ]; then
                     # 强行重写内部路由
