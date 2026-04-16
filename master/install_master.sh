@@ -121,7 +121,7 @@ EOF
 fi
 # 🛑 拦截块结束
 
-# 3. 初始化 SQLite 数据库 (幂等操作，升级模式下可安全修补表结构)
+# 3. 初始化 SQLite 数据库 (幂等操作，升级模式下由 tg_master.sh 负责热修补)
 echo -e "\n[3/4] 正在初始化 SQLite 数据库表结构..."
 sqlite3 "$DB_FILE" <<EOF
 CREATE TABLE IF NOT EXISTS nodes (
@@ -130,6 +130,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     agent_ip TEXT,
     agent_port TEXT,
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    region TEXT DEFAULT 'UNKNOWN',
+    node_alias TEXT,
     PRIMARY KEY(chat_id, node_name)
 );
 EOF
