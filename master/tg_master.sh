@@ -60,9 +60,10 @@ generate_signed_url() {
 }
 # ========================================================================
 
-# ================== [v3.1.3 核心: 数据库结构无损热升级] ==================
-# 自动探测并增加 region 字段，屏蔽已存在的报错，保护老节点数据
+# ================== [v3.1.3/v3.5.2 核心: 数据库结构无损热升级] ==================
+# 自动探测并增加 region 与 node_alias 字段，屏蔽已存在的报错，保护老节点数据
 db_exec "ALTER TABLE nodes ADD COLUMN region TEXT DEFAULT 'UNKNOWN';" 2>/dev/null
+db_exec "ALTER TABLE nodes ADD COLUMN node_alias TEXT;" 2>/dev/null
 # ========================================================================
 
 # --- 核心轮询循环 ---
@@ -79,6 +80,20 @@ while true; do
             
             CHAT_ID=$(echo "$UPDATE" | jq -r '.message.chat.id // .callback_query.message.chat.id')
             TEXT=$(echo "$UPDATE" | jq -r '.message.text // .callback_query.data')
+            REPLY_TO_TEXT=$(echo "$UPDATE" | jq -r '.message.reply_to_message.text // empty')
+
+            # ================== [v3.5.2 新增: 拦截别名修改的对话回复] ==================
+            if [[ "$REPLY_TO_TEXT" == *"✏️ 请回复本消息以重命名节点:"* ]]; then
+                # 精准提取被回复消息中的节点主键名
+                TARGET_NODE=$(echo "$REPLY_TO_TEXT" | grep -v "✏️" | grep -v "仅限" | tr -d '\` ' | tr -cd 'a-zA-Z0-9_.-' | head -n 1)
+                # 强清洗用户输入的新名字
+                NEW_ALIAS=$(echo "$TEXT" | tr -cd 'a-zA-Z0-9_ \-\u4e00-\u9fa5' | cut -c 1-20)
+                
+                if [ -n "$TARGET_NODE" ] && [ -n "$NEW_ALIAS" ]; then
+                    # 强行重写内部路由
+                    TEXT="do_rename:${TARGET_NODE}:${NEW_ALIAS}"
+                fi
+            fi
 
             # ================== [v3.0.1 新增: 消除转圈圈与获取消息ID] ==================
             CB_ID=$(echo "$UPDATE" | jq -r '.callback_query.id // empty')
@@ -95,21 +110,27 @@ while true; do
             if [[ "$TEXT" == *"#REGISTER#"* ]]; then
                 REG_LINE=$(echo "$TEXT" | grep "#REGISTER#" | head -n 1 | tr -d '\` ')
                 
-                # V3.1.3 兼容性拆包: 判断是新版协议 (5个字段) 还是老版协议 (4个字段)
+                # V3.5.2 兼容性拆包: 支持 6字段(双轨)、5字段(单轨)、4字段(远古)
                 FIELD_COUNT=$(echo "$REG_LINE" | awk -F'|' '{print NF}')
-                if [ "$FIELD_COUNT" -ge 5 ]; then
+                if [ "$FIELD_COUNT" -ge 6 ]; then
+                    IFS='|' read -r MAGIC RAW_REGION RAW_NODE RAW_IP RAW_PORT RAW_ALIAS <<< "$REG_LINE"
+                elif [ "$FIELD_COUNT" -eq 5 ]; then
                     IFS='|' read -r MAGIC RAW_REGION RAW_NODE RAW_IP RAW_PORT <<< "$REG_LINE"
+                    RAW_ALIAS="$RAW_NODE"
                 else
                     IFS='|' read -r MAGIC RAW_NODE RAW_IP RAW_PORT <<< "$REG_LINE"
                     RAW_REGION="UNKNOWN"
+                    RAW_ALIAS="$RAW_NODE"
                 fi
                 
                 # 🛡️ 强制字符白名单过滤：保留历史特征不变
                 CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
-                AGENT_REGION=$(echo "$RAW_REGION" | tr -cd 'a-zA-Z0-9' | cut -c 1-10) # 提取国家大区
+                AGENT_REGION=$(echo "$RAW_REGION" | tr -cd 'a-zA-Z0-9' | cut -c 1-10)
                 NODE_NAME=$(echo "$RAW_NODE" | tr -cd 'a-zA-Z0-9_.-' | cut -c 1-30)
                 AGENT_IP=$(echo "$RAW_IP" | tr -cd 'a-zA-Z0-9.:\[\]-' | cut -c 1-50)
                 AGENT_PORT=$(echo "$RAW_PORT" | tr -cd '0-9' | cut -c 1-5)
+                NODE_ALIAS=$(echo "$RAW_ALIAS" | tr -d '"'\''\`\$\|&;<>\n\r' | cut -c 1-30)
+                [ -z "$NODE_ALIAS" ] && NODE_ALIAS="$NODE_NAME"
                 
                 if [[ "$AGENT_IP" =~ ^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2[0-9]|3[0-1])\.|^::1$|^localhost$ ]]; then
                     send_msg "$CHAT_ID" "⛔ **安全拦截**：禁止注册内网或回环 IP，防止 SSRF 攻击渗透。"
@@ -121,9 +142,9 @@ while true; do
                     continue
                 fi
 
-                # 入库时追加 region 字段
-                db_exec "INSERT INTO nodes (chat_id, node_name, agent_ip, agent_port, last_seen, region) VALUES ('$CHAT_ID', '$NODE_NAME', '$AGENT_IP', '$AGENT_PORT', CURRENT_TIMESTAMP, '$AGENT_REGION') ON CONFLICT(chat_id, node_name) DO UPDATE SET agent_ip='$AGENT_IP', agent_port='$AGENT_PORT', last_seen=CURRENT_TIMESTAMP, region='$AGENT_REGION';"
-                send_msg "$CHAT_ID" "✅ **司令部确认 (v${MASTER_VERSION})**\n节点接入成功: \`$NODE_NAME\`\n地址: \`$AGENT_IP:$AGENT_PORT\`"
+                # [核心] 入库时追加 node_alias 字段
+                db_exec "INSERT INTO nodes (chat_id, node_name, agent_ip, agent_port, last_seen, region, node_alias) VALUES ('$CHAT_ID', '$NODE_NAME', '$AGENT_IP', '$AGENT_PORT', CURRENT_TIMESTAMP, '$AGENT_REGION', '$NODE_ALIAS') ON CONFLICT(chat_id, node_name) DO UPDATE SET agent_ip='$AGENT_IP', agent_port='$AGENT_PORT', last_seen=CURRENT_TIMESTAMP, region='$AGENT_REGION', node_alias='$NODE_ALIAS';"
+                send_msg "$CHAT_ID" "✅ **司令部确认 (v${MASTER_VERSION})**\n节点 \`${NODE_ALIAS}\` 档案已录入！"
                 
                 # ================== [v3.1.3 丝滑连招: 直接呼出全球大区雷达] ==================
                 REGION_DATA=$(db_exec "SELECT region, COUNT(*) FROM nodes WHERE chat_id='$CHAT_ID' GROUP BY region;")
@@ -221,15 +242,17 @@ while true; do
                     TARGET_REGION=$(echo "${TEXT#*:}" | tr -cd 'a-zA-Z0-9')
                     CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
                     
-                    NODE_LIST=$(db_exec "SELECT node_name FROM nodes WHERE chat_id='$CHAT_ID' AND region='$TARGET_REGION';")
+                    # [v3.5.2] 提取物理主键和展示别名
+                    NODE_LIST=$(db_exec "SELECT node_name, IFNULL(node_alias, node_name) FROM nodes WHERE chat_id='$CHAT_ID' AND region='$TARGET_REGION';")
                     if [ -z "$NODE_LIST" ]; then
                         send_msg "$CHAT_ID" "⚠️ 该战区下暂无可用节点。"
                     else
                         BTNS="["
                         COL=0
                         ROW_STR="["
-                        for N in $NODE_LIST; do
-                            ROW_STR="$ROW_STR{\"text\":\"🖥️ $N\",\"callback_data\":\"manage:$N\"},"
+                        while IFS='|' read -r N_NAME N_ALIAS; do
+                            [ -z "$N_NAME" ] && continue
+                            ROW_STR="$ROW_STR{\"text\":\"🖥️ $N_ALIAS\",\"callback_data\":\"manage:$N_NAME\"},"
                             COL=$((COL+1))
                             if [ $COL -eq 2 ]; then
                                 ROW_STR="${ROW_STR%,}]"
@@ -237,7 +260,7 @@ while true; do
                                 COL=0
                                 ROW_STR="["
                             fi
-                        done
+                        done <<< "$NODE_LIST"
                         # 如果是奇数，补齐最后的尾巴
                         if [ $COL -eq 1 ]; then
                             ROW_STR="${ROW_STR%,}]"
@@ -250,11 +273,16 @@ while true; do
                     ;;
 
                 manage:*)
-                    # 🛡️ 强制过滤节点名，防止面板渲染时发生 XSS 或注入
+                    # 🛡️ 强制过滤节点物理主键，防止面板渲染时发生 XSS 或注入
                     TARGET_NODE=$(echo "${TEXT#*:}" | tr -cd 'a-zA-Z0-9_.-')
-                    # 【核心升级】拆分下发按钮，精准对应 Google 与 Trust 两个模块，并排版为 3 行 2 列
-                    BTNS="[[{\"text\":\"📍 Google 纠偏\",\"callback_data\":\"google:$TARGET_NODE\"}, {\"text\":\"🛡️ 信用净化\",\"callback_data\":\"trust:$TARGET_NODE\"}], [{\"text\":\"📜 实时日志\",\"callback_data\":\"log:$TARGET_NODE\"}, {\"text\":\"📊 统计战报\",\"callback_data\":\"report:$TARGET_NODE\"}], [{\"text\":\"🗑️ 剔除失联节点\",\"callback_data\":\"del:$TARGET_NODE\"}, {\"text\":\"⬅️ 返回大区目录\",\"callback_data\":\"list_nodes\"}]]"
-                    send_ui "$CHAT_ID" "⚙️ **目标锁定**: \`$TARGET_NODE\`\n请选择战术动作：" "$BTNS"
+                    
+                    # [v3.5.2] 提取该节点的展示别名
+                    TARGET_ALIAS=$(db_exec "SELECT IFNULL(node_alias, node_name) FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE' LIMIT 1;")
+                    [ -z "$TARGET_ALIAS" ] && TARGET_ALIAS="$TARGET_NODE"
+                    
+                    # 【核心升级】排版为 4 行 2 列，加入“修改备注”按钮
+                    BTNS="[[{\"text\":\"📍 Google 纠偏\",\"callback_data\":\"google:$TARGET_NODE\"}, {\"text\":\"🛡️ 信用净化\",\"callback_data\":\"trust:$TARGET_NODE\"}], [{\"text\":\"📜 实时日志\",\"callback_data\":\"log:$TARGET_NODE\"}, {\"text\":\"📊 统计战报\",\"callback_data\":\"report:$TARGET_NODE\"}], [{\"text\":\"✏️ 修改节点备注\",\"callback_data\":\"rename:$TARGET_NODE\"}, {\"text\":\"🗑️ 剔除失联节点\",\"callback_data\":\"del:$TARGET_NODE\"}], [{\"text\":\"⬅️ 返回大区目录\",\"callback_data\":\"list_nodes\"}]]"
+                    send_ui "$CHAT_ID" "⚙️ **目标锁定**: \`$TARGET_ALIAS\`\n*(身份标识: $TARGET_NODE)*\n请选择战术动作：" "$BTNS"
                     ;;
 
                 del:*)
@@ -282,6 +310,47 @@ while true; do
                         done <<< "$REGION_DATA"
                         BTNS="${BTNS%,}]"
                         send_ui "$CHAT_ID" "🌍 刷新后的全视界雷达：" "$BTNS"
+                    fi
+                    ;;
+
+                rename:*)
+                    TARGET_NODE=$(echo "${TEXT#*:}" | tr -cd 'a-zA-Z0-9_.-')
+                    CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
+                    # [v3.5.2] 发送 ForceReply 引导用户回复
+                    curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+                        -H "Content-Type: application/json" \
+                        -d "{\"chat_id\":\"$CHAT_ID\",\"text\":\"✏️ 请回复本消息以重命名节点:\n\`$TARGET_NODE\`\n(仅限中英文、数字，最长20字符)\",\"parse_mode\":\"Markdown\",\"reply_markup\":{\"force_reply\":true}}" > /dev/null
+                    ;;
+
+                do_rename:*)
+                    # [v3.5.2] 内部重命名路由 (已被第2处的代码拦截并格式化)
+                    IFS=':' read -r CMD TARGET_NODE NEW_ALIAS <<< "$TEXT"
+                    CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
+                    
+                    AGENT_INFO=$(db_exec "SELECT agent_ip, agent_port FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE' LIMIT 1;")
+                    AGENT_IP=$(echo "$AGENT_INFO" | cut -d'|' -f1)
+                    AGENT_PORT=$(echo "$AGENT_INFO" | cut -d'|' -f2)
+
+                    if [ -n "$AGENT_IP" ] && [ -n "$AGENT_PORT" ]; then
+                        send_msg "$CHAT_ID" "⏳ 正在向 \`$TARGET_NODE\` 下发重命名指令，正在建立加密隧道..."
+                        
+                        # 安全 URL 编码，防止中文在 URL 传输中损坏
+                        ENCODED_ALIAS=$(jq -rn --arg x "$NEW_ALIAS" '$x|@uri' 2>/dev/null)
+                        
+                        TARGET_URL=$(generate_signed_url "$AGENT_IP" "$AGENT_PORT" "/trigger_rename")
+                        TARGET_URL="${TARGET_URL}&alias=${ENCODED_ALIAS}"
+                        
+                        RESPONSE=$(curl -s -m 5 "$TARGET_URL" || echo "FAILED")
+                        
+                        if [ "$RESPONSE" == "FAILED" ]; then
+                            send_msg "$CHAT_ID" "❌ 指令下发超时！请检查节点连通性。"
+                        elif [[ "$RESPONSE" == *"Action Accepted"* ]]; then
+                            send_msg "$CHAT_ID" "✅ 通讯成功！节点别名已下发: \`$NEW_ALIAS\`\n*(注: 节点随后将自动向中枢报备刷新面板)*"
+                        else
+                            send_msg "$CHAT_ID" "⚠️ 节点拒绝了请求，请确保该节点的 Agent 已经更新至 v3.5.2"
+                        fi
+                    else
+                        send_msg "$CHAT_ID" "❌ 数据库中未找到该节点的通讯地址。"
                     fi
                     ;;
 
