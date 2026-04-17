@@ -203,8 +203,8 @@ echo "* * * * * pgrep -f tg_master.sh >/dev/null || nohup bash ${MASTER_DIR}/tg_
 [ -f /tmp/cron_master ] && crontab /tmp/cron_master 2>/dev/null
 rm -f /tmp/cron_master
 
-# 立刻启动
-pgrep -f tg_master.sh >/dev/null || nohup bash "${MASTER_DIR}/tg_master.sh" >/dev/null 2>&1 &
+# 立刻启动 (追加 disown 彻底脱离终端管控，实现绝对静默)
+pgrep -f tg_master.sh >/dev/null || { nohup bash "${MASTER_DIR}/tg_master.sh" >/dev/null 2>&1 & disown 2>/dev/null; }
 
 # ================== [v3.2.2 优化: 战报文案分流] ==================
 echo "========================================================"
