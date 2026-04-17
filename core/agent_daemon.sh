@@ -340,6 +340,51 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(f"500 Internal Error: {str(e)}\n".encode('utf-8'))
 
+        # ================== [v3.6.0 新增: 零信任 OTA 远程静默升级路由] ==================
+        elif req_path == '/trigger_ota':
+            try:
+                # 动态读取最新 config 内存态
+                config_mem = {}
+                config_path = '/opt/ip_sentinel/config.conf'
+                if os.path.exists(config_path):
+                    with open(config_path, 'r', errors='ignore') as f:
+                        for line in f:
+                            line = line.strip()
+                            if '=' in line and not line.startswith('#'):
+                                key, val = line.split('=', 1)
+                                config_mem[key] = val.strip('"\'')
+                                
+                # 🛡️ 熔断校验 1: Agent 本地是否开启了 OTA 授权
+                if config_mem.get('ENABLE_OTA', 'false').lower() != 'true':
+                    self.send_response(403)
+                    self.end_headers()
+                    self.wfile.write(b"403 Forbidden: OTA Upgrade Disabled locally\n")
+                    return
+                    
+                # 🛡️ 熔断校验 2: 是否处于官方公共网关下 (强行硬编码拦截)
+                if config_mem.get('TG_TOKEN', '') == 'OFFICIAL_GATEWAY_MODE':
+                    self.send_response(403)
+                    self.end_headers()
+                    self.wfile.write(b"403 Forbidden: OTA strictly disabled under Public Gateway mode\n")
+                    return
+                    
+                # 校验通过，立即返回 200 回执，释放 Master 连接池
+                self.send_response(200)
+                self.send_header("Content-type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"Action Accepted: trigger_ota\n")
+                
+                # 挂起异步升级进程 (注入 SILENT_OTA 旁路变量跳过所有 read -p 交互)
+                # 注意：这里我们写死拉取 dev-v3.6.0 分支的安装脚本进行覆盖测试，未来正式版上线时会改回 main
+                repo_url = "https://raw.githubusercontent.com/hotyue/IP-Sentinel/dev-v3.6.0"
+                ota_cmd = f"export SILENT_OTA='true'; curl -sL {repo_url}/core/install.sh | bash > /opt/ip_sentinel/logs/ota_upgrade.log 2>&1 &"
+                subprocess.Popen(['bash', '-c', ota_cmd])
+                
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f"500 Internal Error: {str(e)}\n".encode('utf-8'))
+
         else:
             self.send_response(404)
             self.end_headers()
