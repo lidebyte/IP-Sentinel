@@ -298,7 +298,9 @@ if [ "$UPGRADE_MODE" == "false" ]; then
             echo -e "\033[33m由于您使用了官方公共网关，为防止潜在的滥用或供应链风险，本节点的 [OTA 远程升级] 权限已被系统底层强制禁用。\033[0m"
             echo -e "\033[33m💡 若未来需要启用 OTA，请自建私有中枢后重新部署本节点。\033[0m"
         else
-            echo -e "\n\033[36m📘 私有 Bot 创建教程: https://blog.iot-architect.com/engineering-practice/create-private-telegram-bot-via-botfather/\033[0m"
+            # [v3.6.0 优化] 使用 OSC 8 终端超链接协议，实现“点击即打开”的极客交互
+            echo -e "\n\033[36m📘 私有 Bot 创建教程: \033[4m\033]8;;https://blog.iot-architect.com/engineering-practice/create-private-telegram-bot-via-botfather/\033\\👉 [点击此处直接在浏览器中打开] 👈\033]8;;\033\\\033[0m"
+            echo -e "\033[90m   (若您的终端较老不支持点击，请手动复制: https://blog.iot-architect.com/engineering-practice/create-private-telegram-bot-via-botfather/ )\033[0m"
             read -p "请输入您的私有 Telegram Bot Token: " USER_TOKEN
             
             # 🛡️ 核心防误触修复：拦截空回车或粘贴换行导致的跳过 Bug
@@ -324,7 +326,8 @@ if [ "$UPGRADE_MODE" == "false" ]; then
         fi
 
         echo -e "\n\033[33m💡 提示：如果您不知道下方自己的 Chat ID 是什么，可以关注 @userinfobot 获取。\033[0m"
-        echo -e "\033[36m📘 查看图文教程: https://blog.iot-architect.com/engineering-practice/get-telegram-personal-id-via-userinfobot/\033[0m"
+        echo -e "\033[36m📘 查看图文教程: \033[4m\033]8;;https://blog.iot-architect.com/engineering-practice/get-telegram-personal-id-via-userinfobot/\033\\👉 [点击此处直接在浏览器中打开] 👈\033]8;;\033\\\033[0m"
+        echo -e "\033[90m   (若您的终端较老不支持点击，请手动复制: https://blog.iot-architect.com/engineering-practice/get-telegram-personal-id-via-userinfobot/ )\033[0m"
         read -p "请输入你的 Chat ID (必须准确，否则无法联控): " CHAT_ID
         
         # ================== [v3.0.3 变更: 智能随机高位端口生成系统] ==================
