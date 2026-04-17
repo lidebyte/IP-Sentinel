@@ -113,17 +113,6 @@ if [ "$UPGRADE_MODE" == "false" ]; then
     # 2. 交互配置机器人
     echo -e "\n[2/4] 配置控制中枢机器人:"
     read -p "请输入 Telegram Bot Token: " TG_TOKEN
-    
-    # [v3.6.0 新增: 控制中枢 OTA 下发权限配置]
-    echo -e "\n\033[36m[OTA 权限] 是否允许本中枢向受控节点下发远程 OTA 升级指令？\033[0m"
-    read -p "请输入选择 [y/n] (默认n, 建议仅在完全信任节点环境时开启): " MASTER_OTA_CHOICE
-    if [[ "$MASTER_OTA_CHOICE" =~ ^[Yy]$ ]]; then
-        ENABLE_MASTER_OTA="true"
-        echo -e "\033[32m✅ 中枢 OTA 升级下发权限已开启。\033[0m"
-    else
-        ENABLE_MASTER_OTA="false"
-        echo -e "\033[33m🛡️ 中枢 OTA 升级下发权限已关闭。\033[0m"
-    fi
 
     cat > "${MASTER_DIR}/master.conf" << EOF
 # IP-Sentinel Master 本地固化配置 (v${TARGET_VERSION})
@@ -131,17 +120,9 @@ MASTER_VERSION="$TARGET_VERSION"
 TG_TOKEN="$TG_TOKEN"
 DB_FILE="$DB_FILE"
 MASTER_DIR="$MASTER_DIR"
-ENABLE_MASTER_OTA="$ENABLE_MASTER_OTA"
 EOF
 fi
 # 🛑 拦截块结束
-
-# [v3.6.0 升级兼容] 补齐老版本缺失的 OTA 下发权限开关 (默认对自建用户开启，保障丝滑体验)
-if [ "$UPGRADE_MODE" == "true" ]; then
-    if ! grep -q "^ENABLE_MASTER_OTA=" "${MASTER_DIR}/master.conf"; then
-        echo 'ENABLE_MASTER_OTA="true"' >> "${MASTER_DIR}/master.conf"
-    fi
-fi
 
 # 3. 初始化 SQLite 数据库 (幂等操作，升级模式下由 tg_master.sh 负责热修补)
 echo -e "\n[3/4] 正在初始化 SQLite 数据库表结构..."
@@ -154,8 +135,6 @@ CREATE TABLE IF NOT EXISTS nodes (
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
     region TEXT DEFAULT 'UNKNOWN',
     node_alias TEXT,
-    enable_google TEXT DEFAULT 'true',
-    enable_trust TEXT DEFAULT 'true',
     PRIMARY KEY(chat_id, node_name)
 );
 EOF

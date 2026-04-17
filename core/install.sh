@@ -49,20 +49,12 @@ if [ ! -s "/tmp/map.json" ]; then
 fi
 
 echo -e "\n请选择操作:"
-# [v3.6.0 新增: 无人值守静默 OTA 升级拦截]
-if [ "$SILENT_OTA" == "true" ] && [ -f "$CONFIG_FILE" ]; then
-    echo -e "\n📡 [系统] 接收到远端静默 OTA 指令，直接切入平滑升级模式..."
-    ACTION_CHOICE="1"
-    # 模拟用户输入，直接跳过提示
-    UPGRADE_CHOICE="y"
-    LOG_CHOICE="y"
-else
-    echo -e "\n请选择操作:"
-    echo "  1) 🚀 部署边缘节点 (进入全球节点配置)"
-    echo "  2) 🗑️ 一键卸载 IP-Sentinel"
-    read -p "请输入选择 [1-2] (默认1): " ACTION_CHOICE
-    ACTION_CHOICE=${ACTION_CHOICE:-1}
-fi
+echo "  1) 🚀 部署边缘节点 (进入全球节点配置)"
+echo "  2) 🗑️ 一键卸载 IP-Sentinel"
+read -p "请输入选择 [1-2] (默认1): " ACTION_CHOICE
+
+# [v3.5.2 修复] 防止用户直接回车导致变量为空，从而漏过下方的平滑升级判定
+ACTION_CHOICE=${ACTION_CHOICE:-1}
 
 if [ "$ACTION_CHOICE" == "2" ]; then
     echo -e "\n⏳ 正在拉取卸载程序..."
@@ -79,20 +71,10 @@ KEEP_LOGS="true"
 
 if [ "$ACTION_CHOICE" == "1" ] && [ -f "$CONFIG_FILE" ]; then
     echo -e "\n\033[33m💡 哨兵雷达提示：检测到本机已部署过 IP-Sentinel。\033[0m"
-    
-    # [v3.6.0 终极修复: 拦截静默模式下的交互，防止 read 吞噬管道脚本指令]
-    if [ "$SILENT_OTA" == "true" ]; then
-        UPGRADE_CHOICE="y"
-        LOG_CHOICE="y"
-    else
-        read -p "👉 是否按原配置直接进行平滑升级？(y/n, 默认y): " UPGRADE_CHOICE
-    fi
-    
+    read -p "👉 是否按原配置直接进行平滑升级？(y/n, 默认y): " UPGRADE_CHOICE
     if [[ -z "$UPGRADE_CHOICE" || "$UPGRADE_CHOICE" =~ ^[Yy]$ ]]; then
         UPGRADE_MODE="true"
-        if [ "$SILENT_OTA" != "true" ]; then
-            read -p "👉 是否保留历史运行日志？(y/n, 默认y): " LOG_CHOICE
-        fi
+        read -p "👉 是否保留历史运行日志？(y/n, 默认y): " LOG_CHOICE
         if [[ "$LOG_CHOICE" =~ ^[Nn]$ ]]; then
             KEEP_LOGS="false"
         fi
@@ -224,10 +206,20 @@ if [ "$UPGRADE_MODE" == "false" ]; then
     mkdir -p "${INSTALL_DIR}/data/regions/${COUNTRY_ID}/${STATE_ID}"
     mkdir -p "${INSTALL_DIR}/logs"
 
-    # 3. 功能模块前置开关 (v3.6.0 默认全量加载，后续经由 TG 动态启停)
-    echo -e "\n[3/7] 正在初始化养护模块 (默认全量部署，支持 TG 远程启停)..."
+    # 3. 功能模块前置开关 (按需加载)
+    echo -e "\n[3/7] 请选择需要开启的养护模块 (按需开启，节省资源):"
+    echo "  1) 📍 仅开启 [Google 区域纠偏] (默认，适合流媒体解锁机位漂移)"
+    echo "  2) 🛡️ 仅开启 [IP 信用净化] (适合高风险机房 IP 降低 Scamalytics 分数)"
+    echo "  3) 🔥 双管齐下 (同时开启以上两项)"
+    read -p "请输入选择 [1-3] (默认1): " MODULE_CHOICE
+
     ENABLE_GOOGLE="true"
-    ENABLE_TRUST="true"
+    ENABLE_TRUST="false"
+    case ${MODULE_CHOICE:-1} in
+        2) ENABLE_GOOGLE="false"; ENABLE_TRUST="true" ;;
+        3) ENABLE_GOOGLE="true"; ENABLE_TRUST="true" ;;
+        *) ENABLE_GOOGLE="true"; ENABLE_TRUST="false" ;;
+    esac
 
     # 4. 接入 Master 中枢配置
     echo -e "\n[4/7] 是否接入 Master 司令部？(需要配置与主控相同的 TG 机器人) (y/n)"
@@ -244,25 +236,12 @@ if [ "$UPGRADE_MODE" == "false" ]; then
         if [ -z "$USER_TOKEN" ]; then
             TG_TOKEN="OFFICIAL_GATEWAY_MODE" 
             TG_API_URL="https://omni-gateway.samanthaestime296.workers.dev" 
-            ALLOW_OTA="false"
             echo -e "\033[32m✅ 已自动连接官方安全网关 (@OmniBeacon_bot)。\033[0m"
             echo -e "\033[33m👉 请确保您已关注官方机器人并发送过 /start，否则将无法接收消息。\033[0m"
-            echo -e "\033[31m⛔ [安全协议] 为保障节点安全，接入官方网关时，远程 OTA 升级功能已被永久禁用！若需该功能请自建 Master。\033[0m"
         else
             TG_TOKEN="$USER_TOKEN"
             TG_API_URL="https://api.telegram.org/bot${TG_TOKEN}/sendMessage"
             echo -e "\033[32m✅ 已记录您的私有机器人 Token。\033[0m"
-            
-            # [v3.6.0 新增: 私有节点 OTA 授权]
-            echo -e "\n\033[36m[OTA 授权] 是否允许 Master 司令部向本节点下发 OTA 远程升级指令？\033[0m"
-            read -p "请输入选择 [y/n] (默认n, 拒绝则只能登录 SSH 手动升级): " OTA_CHOICE
-            if [[ "$OTA_CHOICE" =~ ^[Yy]$ ]]; then
-                ALLOW_OTA="true"
-                echo -e "\033[32m✅ 远程 OTA 升级接口已开启，随时听候司令部调遣。\033[0m"
-            else
-                ALLOW_OTA="false"
-                echo -e "\033[33m🛡️ 远程 OTA 升级接口已关闭，拒绝一切远端升级指令。\033[0m"
-            fi
         fi
 
         echo -e "\033[33m💡 提示：如果您不知道自己的 Chat ID，可以关注 @userinfobot 获取。\033[0m"
@@ -452,9 +431,6 @@ BIND_IP="$BIND_IP"
 # [v3.5.2新增: 双轨身份系统]
 NODE_NAME="$NODE_NAME"
 NODE_ALIAS="$NODE_ALIAS"
-
-# [v3.6.0新增: 远程控制权限]
-ALLOW_OTA="$ALLOW_OTA"
 EOF
 
     # ================== [v3.0.3 变更: 敏感配置文件权限收敛] ==================
@@ -515,17 +491,6 @@ if [ "$UPGRADE_MODE" == "true" ]; then
             NODE_ALIAS="$NODE_NAME"
             echo "NODE_ALIAS=\"$NODE_ALIAS\"" >> "$CONFIG_FILE"
         fi
-    fi
-
-    # [v3.6.0 升级兼容] 补齐缺失的远程控制开关，尊重原有开关状态
-    if ! grep -q "^ALLOW_OTA=" "$CONFIG_FILE"; then
-        echo 'ALLOW_OTA="false"' >> "$CONFIG_FILE"
-    fi
-    if ! grep -q "^ENABLE_GOOGLE=" "$CONFIG_FILE"; then
-        echo 'ENABLE_GOOGLE="true"' >> "$CONFIG_FILE"
-    fi
-    if ! grep -q "^ENABLE_TRUST=" "$CONFIG_FILE"; then
-        echo 'ENABLE_TRUST="true"' >> "$CONFIG_FILE"
     fi
 fi
 # ========================================================================
