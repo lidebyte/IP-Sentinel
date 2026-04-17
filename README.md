@@ -56,7 +56,7 @@
 ```Bash
 bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/master/install_master.sh)
 ```
-- 部署 Agent (边缘哨兵)：在需要养护的机器上执行 Agent 脚本，安装时选择私有独立中枢，并输入您自建机器人的 Token 以及与 Master 一致的 Chat ID：
+- 部署 Agent (边缘哨兵)：在需要养护的机器上执行 Agent 脚本，安装时选择私有独立中枢，并分别输入您自建机器人的 Token 以及您的个人 Chat ID：
 
 ```Bash
 bash <(curl -sL https://raw.githubusercontent.com/hotyue/IP-Sentinel/main/core/install.sh)
