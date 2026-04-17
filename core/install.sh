@@ -95,12 +95,10 @@ pkill -9 -f "webhook.py" >/dev/null 2>&1 || true
 pkill -9 -f "agent_daemon.sh" >/dev/null 2>&1 || true
 pkill -9 -f "runner.sh" >/dev/null 2>&1 || true
 
-# 2. 清除系统定时任务 (Cron) 中的旧版条目
-if crontab -l >/dev/null 2>&1; then
-    crontab -l | grep -v "ip_sentinel" > /tmp/cron_clean
-    crontab /tmp/cron_clean
-    rm -f /tmp/cron_clean
-fi
+# 2. 清除系统定时任务 (Cron) 中的旧版条目 (安全容错版)
+crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_clean || true
+[ -f /tmp/cron_clean ] && crontab /tmp/cron_clean 2>/dev/null
+rm -f /tmp/cron_clean
 
 # 3. 抹除旧版核心代码，杜绝代码冲突 (根据模式分流)
 if [ "$UPGRADE_MODE" == "true" ]; then
@@ -357,7 +355,7 @@ if [ "$UPGRADE_MODE" == "false" ]; then
 
     # ================== [v3.5.2 新增: 节点不可变主键与展示别名] ==================
     IP_HASH=$(echo "${SAFE_PUBLIC_IP:-127.0.0.1}" | md5sum | cut -c 1-4 | tr 'a-z' 'A-Z')
-    NODE_NAME="$(hostname | cut -c 1-10)-${IP_HASH}"
+    NODE_NAME="$(hostname | tr -cd 'a-zA-Z0-9' | cut -c 1-10)-${IP_HASH}"
     NODE_ALIAS="$NODE_NAME"
 
     if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
@@ -470,7 +468,7 @@ if [ "$UPGRADE_MODE" == "true" ]; then
     # [v3.5.2 热修复] 兼容老版本没有 NODE_NAME 和 NODE_ALIAS 的情况，无损补齐
     if ! grep -q "^NODE_NAME=" "$CONFIG_FILE"; then
         TMP_HASH=$(echo "${SAFE_PUBLIC_IP:-127.0.0.1}" | md5sum | cut -c 1-4 | tr 'a-z' 'A-Z')
-        NODE_NAME="$(hostname | cut -c 1-10)-${TMP_HASH}"
+        NODE_NAME="$(hostname | tr -cd 'a-zA-Z0-9' | cut -c 1-10)-${TMP_HASH}"
         NODE_ALIAS="$NODE_NAME"
         echo "NODE_NAME=\"$NODE_NAME\"" >> "$CONFIG_FILE"
         echo "NODE_ALIAS=\"$NODE_ALIAS\"" >> "$CONFIG_FILE"
@@ -519,7 +517,7 @@ chmod +x ${INSTALL_DIR}/core/*.sh
 
 # 7. 配置系统定时任务 (高频调度与看门狗)
 echo -e "\n[7/7] 正在注入系统定时任务与看门狗进程..."
-crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_backup
+crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_backup || true
 
 # 核心养护模块: 每 30 分钟触发一次
 echo "*/30 * * * * ${INSTALL_DIR}/core/runner.sh >/dev/null 2>&1" >> /tmp/cron_backup
@@ -547,7 +545,7 @@ if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
     nohup bash "${INSTALL_DIR}/core/agent_daemon.sh" >/dev/null 2>&1 &
 fi
 
-crontab /tmp/cron_backup
+[ -f /tmp/cron_backup ] && crontab /tmp/cron_backup 2>/dev/null
 rm -f /tmp/cron_backup
 
 # ================== [v3.4.0 核心: 状态机驱动的热更新路由] ==================
