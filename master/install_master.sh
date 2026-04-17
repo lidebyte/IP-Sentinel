@@ -134,6 +134,19 @@ if [ "$UPGRADE_MODE" == "false" ]; then
     # 2. 交互配置机器人
     echo -e "\n[2/4] 配置控制中枢机器人:"
     read -p "请输入 Telegram Bot Token: " TG_TOKEN
+    
+    # [v3.6.0 新增] 官方网关模式选项 (用于屏蔽全局 OTA 按钮)
+    echo -e "\n请选择您的部署环境身份:"
+    echo "  1) 🛡️ 私有独立中枢 (默认推荐，保留完整 OTA 遥控权限)"
+    echo "  2) ☁️ 官方公共网关 (面向大众服务，将强制物理隐藏全局 OTA 按钮防滥用)"
+    read -p "请输入选择 [1-2] (默认1): " GATEWAY_TYPE
+    GATEWAY_TYPE=${GATEWAY_TYPE:-1}
+    
+    IS_OFFICIAL_GATEWAY="false"
+    if [ "$GATEWAY_TYPE" == "2" ]; then
+        IS_OFFICIAL_GATEWAY="true"
+        echo -e "\033[33m⚠️ 已开启官方公共网关模式，全局 OTA 按钮将被屏蔽。\033[0m"
+    fi
 
     cat > "${MASTER_DIR}/master.conf" << EOF
 # IP-Sentinel Master 本地固化配置 (v${TARGET_VERSION})
@@ -141,7 +154,16 @@ MASTER_VERSION="$TARGET_VERSION"
 TG_TOKEN="$TG_TOKEN"
 DB_FILE="$DB_FILE"
 MASTER_DIR="$MASTER_DIR"
+# [v3.6.0 核心] 官方网关 UI 熔断标识
+IS_OFFICIAL_GATEWAY="$IS_OFFICIAL_GATEWAY"
 EOF
+fi
+
+# [v3.6.0 热修复] 老司令部平滑升级时，自动补齐该字段并默认为 false
+if [ "$UPGRADE_MODE" == "true" ]; then
+    if ! grep -q "^IS_OFFICIAL_GATEWAY=" "${MASTER_DIR}/master.conf"; then
+        echo "IS_OFFICIAL_GATEWAY=\"false\"" >> "${MASTER_DIR}/master.conf"
+    fi
 fi
 # 🛑 拦截块结束
 
