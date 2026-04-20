@@ -258,15 +258,17 @@ if [ "$UPGRADE_MODE" == "false" ]; then
         IFS="|" read -r CITY_ID CITY_NAME < /tmp/cities.txt
         echo -e "\033[32m💡 该区域下仅有单一城市 [$CITY_NAME]，已自动锁定。\033[0m"
     else
-        i=1; CITY_MAP=()
+        i=1; CITY_MAP=(); CITY_NAME_MAP=()
         while IFS="|" read -r c_id c_name; do
             echo "  $i) $c_name"
             CITY_MAP[$i]="$c_id"
+            CITY_NAME_MAP[$i]="$c_name"
             ((i++))
         done < /tmp/cities.txt
         read -p "请输入选择 [1-$((i-1))] (默认1): " CI_SEL
         CI_SEL=${CI_SEL:-1}
         CITY_ID="${CITY_MAP[$CI_SEL]}"
+        CITY_NAME="${CITY_NAME_MAP[$CI_SEL]}"
     fi
 
     # 清理临时文件 (增加清理 continents.txt)
