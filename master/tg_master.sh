@@ -65,7 +65,7 @@ generate_signed_url() {
     local signature=$(echo -n "$payload" | openssl dgst -sha256 -hmac "$CHAT_ID" | awk '{print $NF}')
     
     # 返回最终带签名的 URL
-    echo "http://${target_ip}:${target_port}${action_path}?t=${current_t}&sign=${signature}"
+    echo "https://${target_ip}:${target_port}${action_path}?t=${current_t}&sign=${signature}"
 }
 # ========================================================================
 
@@ -237,7 +237,7 @@ while true; do
                         send_msg "$CHAT_ID" "📢 **司令部指令下达：正在唤醒全舰队执行 OTA 升级...**%0A*(节点升级成功后会主动发回新的入库确认，请注意查收)*"
                         echo "$NODE_DATA" | while IFS='|' read -r NNAME AIP APORT; do
                             TARGET_URL=$(generate_signed_url "$AIP" "$APORT" "/trigger_ota")
-                            curl -s -m 5 "$TARGET_URL" > /dev/null &
+                            curl -k -s -m 5 "$TARGET_URL" > /dev/null &
                             sleep 0.3  # 严格流量削峰
                         done
                     fi
@@ -297,7 +297,7 @@ while true; do
                         send_msg "$CHAT_ID" "📢 **司令部指令下达：正在召唤所有哨兵回传简报...**"
                         echo "$NODE_DATA" | while IFS='|' read -r NNAME AIP APORT; do
                             TARGET_URL=$(generate_signed_url "$AIP" "$APORT" "/trigger_report")
-                            curl -s -m 5 "$TARGET_URL" > /dev/null &
+                            curl -k -s -m 5 "$TARGET_URL" > /dev/null &
                             sleep 0.2  # [新增] 流量削峰：每秒最多并发下发 5 个，保护 Master 网络栈
                         done
                     fi
@@ -312,7 +312,7 @@ while true; do
                         send_msg "$CHAT_ID" "📢 **司令部指令下达：正在唤醒所有哨兵执行系统维护...**"
                         echo "$NODE_DATA" | while IFS='|' read -r NNAME AIP APORT; do
                             TARGET_URL=$(generate_signed_url "$AIP" "$APORT" "/trigger_run")
-                            curl -s -m 5 "$TARGET_URL" > /dev/null &
+                            curl -k -s -m 5 "$TARGET_URL" > /dev/null &
                             sleep 0.2  # [新增] 流量削峰：防止瞬间 fork 导致句柄耗尽
                         done
                     fi
@@ -436,7 +436,7 @@ while true; do
                         TARGET_URL=$(generate_signed_url "$AGENT_IP" "$AGENT_PORT" "/trigger_toggle")
                         TARGET_URL="${TARGET_URL}&mod=${MOD_NAME}&state=${TARGET_STATE}"
                         
-                        RESPONSE=$(curl -s -m 5 "$TARGET_URL" || echo "FAILED")
+                        RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
                         if [[ "$RESPONSE" == *"Action Accepted"* ]]; then
                             # 下发成功，更新 DB，原位重绘
                             db_exec "UPDATE nodes SET enable_${MOD_NAME}='$TARGET_STATE' WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE';"
@@ -536,7 +536,7 @@ while true; do
                         ALIAS_B64=$(echo -n "$NEW_ALIAS" | base64 | tr -d '\n' | tr '+/' '-_')
                         TARGET_URL="${TARGET_URL}&b64=${ALIAS_B64}"
                         
-                        RESPONSE=$(curl -s -m 5 "$TARGET_URL" || echo "FAILED")
+                        RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
                         
                         if [ "$RESPONSE" == "FAILED" ]; then
                             send_msg "$CHAT_ID" "❌ 指令下发超时！请检查节点连通性。"
@@ -576,7 +576,7 @@ while true; do
                         fi
                         
                         TARGET_URL=$(generate_signed_url "$AGENT_IP" "$AGENT_PORT" "/trigger_ota")
-                        RESPONSE=$(curl -s -m 5 "$TARGET_URL" || echo "FAILED")
+                        RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
                         
                         if [ "$RESPONSE" == "FAILED" ]; then
                             TEXT_RES="❌ OTA 指令下发超时！请检查节点公网连通性。"
@@ -617,7 +617,7 @@ while true; do
                         
                         # 🛡️ [v3.0.4] 动态签名生成与触发 (防重放与防篡改)
                         TARGET_URL=$(generate_signed_url "$AGENT_IP" "$AGENT_PORT" "/trigger_${ACTION_TYPE}")
-                        RESPONSE=$(curl -s -m 5 "$TARGET_URL" || echo "FAILED")
+                        RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
                         
                         # 结果判定
                         if [ "$RESPONSE" == "FAILED" ]; then
