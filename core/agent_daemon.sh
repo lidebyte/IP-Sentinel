@@ -372,7 +372,7 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
                 
                 # [修复] 逃逸 Systemd Cgroup，防止 Agent 在升级时被同归于尽机制误杀
                 import shutil
-                repo_url = "https://raw.githubusercontent.com/hotyue/IP-Sentinel/v3.6.2-rc"
+                repo_url = "https://raw.githubusercontent.com/hotyue/IP-Sentinel/main"
                 ota_cmd = f"export SILENT_OTA='true'; curl -fsSL {repo_url}/core/install.sh -o /tmp/ota_agent.sh && bash /tmp/ota_agent.sh > /opt/ip_sentinel/logs/ota_upgrade.log 2>&1"
                 
                 if shutil.which("systemd-run"):

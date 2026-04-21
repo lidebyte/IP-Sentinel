@@ -15,9 +15,9 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # 你的 GitHub 仓库 Raw 数据直链前缀
-# REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/main"
+REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/main"
 # 临时改为开发地址用于测试
-REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/v3.6.2-rc"
+# REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/v3.6.2-rc"
 INSTALL_DIR="/opt/ip_sentinel"
 CONFIG_FILE="${INSTALL_DIR}/config.conf"
 
