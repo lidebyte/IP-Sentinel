@@ -53,37 +53,41 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
     if command -v apt-get >/dev/null 2>&1; then
         # Debian / Ubuntu 系列
         apt-get update -y >/dev/null 2>&1
-        apt-get install -y curl jq cron procps python3 >/dev/null 2>&1
+        # [v3.6.3 抽脂级优化] 注入 --no-install-recommends 拒绝捆绑销售，大幅节省磁盘与内存
+        apt-get install -y --no-install-recommends curl jq cron procps python3 >/dev/null 2>&1
         systemctl enable cron >/dev/null 2>&1 && systemctl start cron >/dev/null 2>&1
         
     elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then
         # RHEL / CentOS / AlmaLinux 系列
         PKG_MGR="yum"
-        command -v dnf >/dev/null 2>&1 && PKG_MGR="dnf"
-        $PKG_MGR install -y curl jq cronie procps-ng python3 >/dev/null 2>&1
+        OPT_ARGS=""
+        if command -v dnf >/dev/null 2>&1; then
+            PKG_MGR="dnf"
+            # [v3.6.3 抽脂级优化] 强行关闭 DNF 的弱依赖拉取
+            OPT_ARGS="--setopt=install_weak_deps=False"
+        fi
+        $PKG_MGR install -y $OPT_ARGS curl jq cronie procps-ng python3 >/dev/null 2>&1
         systemctl enable crond >/dev/null 2>&1 && systemctl start crond >/dev/null 2>&1
         
     elif command -v apk >/dev/null 2>&1; then
-        # [核心修复 Issue #21] Alpine Linux 系列
+        # Alpine 本身就是极致精简，无需特殊参数
         echo "Alpine 探测到系统类型为 Alpine Linux，正在执行轻量级安装..."
         apk add --no-cache curl jq dcron procps python3 bash >/dev/null 2>&1
-        # Alpine 下必须手动创建 cron spool 目录并启动 crond
         mkdir -p /var/spool/cron/crontabs
         rc-update add crond default >/dev/null 2>&1
         service crond start >/dev/null 2>&1
         
     elif command -v pacman >/dev/null 2>&1; then
-        # [核心修复 Issue #250] Arch Linux 系列
+        # Arch Linux 系列
         pacman -Sy --noconfirm curl jq cronie procps-ng python >/dev/null 2>&1
-        # Arch 下某些 cronie 实现可能缺少 /root/.cache 权限，做个兼容保障
         mkdir -p /root/.cache/crontab 2>/dev/null
         systemctl enable cronie >/dev/null 2>&1 && systemctl start cronie >/dev/null 2>&1
         
     else
-        # 无法识别的系统：退出并给出清晰的引导信息
+        # 无法识别的系统：退出并给出清晰的引导信息 (同步更新防捆绑参数)
         echo -e "\033[31m❌ 自动安装失败：系统未知的包管理器。\033[0m"
         echo -e "\033[33m⚠️ 请根据您的操作系统，手动执行以下安装命令后重新运行本脚本：\033[0m"
-        echo -e "  Debian/Ubuntu: \033[36mapt-get update && apt-get install -y curl jq cron procps python3\033[0m"
+        echo -e "  Debian/Ubuntu: \033[36mapt-get update && apt-get install -y --no-install-recommends curl jq cron procps python3\033[0m"
         echo -e "  CentOS/RHEL:   \033[36myum install -y curl jq cronie procps-ng python3\033[0m"
         echo -e "  Alpine Linux:  \033[36mapk add --no-cache curl jq dcron procps python3 bash\033[0m"
         echo -e "  Arch Linux:    \033[36mpacman -Sy curl jq cronie procps-ng python\033[0m"
