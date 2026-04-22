@@ -9,12 +9,12 @@
   "trust_module": {
     "white_urls": [
       "https://www.gov.hk/",
-      "https://www.hko.gov.hk/",
       "https://www.police.gov.hk/",
-      "https://www.hku.hk/",
-      "https://www.hsbc.com.hk/",
+      "https://www.hko.gov.hk/",
       "https://www.mtr.com.hk/",
-      "https://www.hktvmall.com/"
+      "https://www.hktvmall.com/",
+      "https://www.hku.hk/",
+      "https://www.hsbc.com.hk/"
     ],
     "static_urls": [
       "https://www.gov.hk/",
