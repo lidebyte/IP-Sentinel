@@ -623,21 +623,17 @@ curl -sL "${REPO_RAW_URL}/core/agent_daemon.sh" -o "${INSTALL_DIR}/core/agent_da
 curl -sL "${REPO_RAW_URL}/core/uninstall.sh" -o "${INSTALL_DIR}/core/uninstall.sh"
 curl -sL "${REPO_RAW_URL}/data/user_agents.txt" -o "${INSTALL_DIR}/data/user_agents.txt"
 
-# 动态按需组件
-if [ "$ENABLE_GOOGLE" == "true" ]; then
-    curl -sL "${REPO_RAW_URL}/core/mod_google.sh" -o "${INSTALL_DIR}/core/mod_google.sh"
-    # [v3.2.2 修复] 动态匹配词库下载逻辑
-    if [ "$UPGRADE_MODE" == "false" ]; then
-        curl -sL "${REPO_RAW_URL}/data/keywords/${KEYWORD_FILE}" -o "${INSTALL_DIR}/data/keywords/${KEYWORD_FILE}"
-    else
-        # 升级模式：利用已有的 REGION_CODE 更新通用词库
-        curl -sL "${REPO_RAW_URL}/data/keywords/kw_${REGION_CODE}.txt" -o "${INSTALL_DIR}/data/keywords/kw_${REGION_CODE}.txt" 2>/dev/null || true
-    fi
+# [v3.6.4 修复] 废除物理阉割，全量下载模块装甲，交由 config.conf 动态控制底层启停
+curl -sL "${REPO_RAW_URL}/core/mod_google.sh" -o "${INSTALL_DIR}/core/mod_google.sh"
+# 动态匹配词库下载逻辑
+if [ "$UPGRADE_MODE" == "false" ]; then
+    curl -sL "${REPO_RAW_URL}/data/keywords/${KEYWORD_FILE}" -o "${INSTALL_DIR}/data/keywords/${KEYWORD_FILE}"
+else
+    # 升级模式：利用已有的 REGION_CODE 更新通用词库
+    curl -sL "${REPO_RAW_URL}/data/keywords/kw_${REGION_CODE}.txt" -o "${INSTALL_DIR}/data/keywords/kw_${REGION_CODE}.txt" 2>/dev/null || true
 fi
 
-if [ "$ENABLE_TRUST" == "true" ]; then
-    curl -sL "${REPO_RAW_URL}/core/mod_trust.sh" -o "${INSTALL_DIR}/core/mod_trust.sh"
-fi
+curl -sL "${REPO_RAW_URL}/core/mod_trust.sh" -o "${INSTALL_DIR}/core/mod_trust.sh"
 
 chmod +x ${INSTALL_DIR}/core/*.sh
 
