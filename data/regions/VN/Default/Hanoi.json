@@ -8,13 +8,22 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://vi.wikipedia.org/wiki/Đặc_biệt:Ngẫu_nhiên",
       "https://chinhphu.vn/",
-      "https://vnexpress.net/",
-      "https://tuoitre.vn/",
-      "https://vtv.vn/",
+      "https://dichvucong.gov.vn/",
+      "https://vnu.edu.vn/",
+      "https://www.vietcombank.com.vn/",
       "https://shopee.vn/",
-      "https://tiki.vn/"
+      "https://tiki.vn/",
+      "https://vnexpress.net/"
+    ],
+    "static_urls": [
+      "https://chinhphu.vn/",
+      "https://dichvucong.gov.vn/",
+      "https://vnu.edu.vn/",
+      "https://www.vietcombank.com.vn/",
+      "https://shopee.vn/",
+      "https://tiki.vn/",
+      "https://vnexpress.net/"
     ]
   }
 }

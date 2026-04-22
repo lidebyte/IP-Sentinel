@@ -8,11 +8,20 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://es.wikipedia.org/wiki/Especial:Aleatoria",
-      "https://www.elmundo.es/",
-      "https://www.elpais.com/",
-      "https://www.marca.com/",
-      "https://www.rtve.es/",
+      "https://administracion.gob.es/",
+      "https://www.agenciatributaria.es/",
+      "https://www.santander.es/",
+      "https://www.renfe.com/",
+      "https://www.amazon.es/",
+      "https://www.zara.com/es/",
+      "https://www.elcorteingles.es/"
+    ],
+    "static_urls": [
+      "https://administracion.gob.es/",
+      "https://www.agenciatributaria.es/",
+      "https://www.santander.es/",
+      "https://www.renfe.com/",
+      "https://www.amazon.es/",
       "https://www.zara.com/es/",
       "https://www.elcorteingles.es/"
     ]

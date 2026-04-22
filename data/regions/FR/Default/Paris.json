@@ -8,13 +8,22 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://www.lemonde.fr/",
-      "https://www.lefigaro.fr/",
-      "https://www.amazon.fr/",
       "https://www.service-public.fr/",
-      "https://fr.wikipedia.org/wiki/Sp%C3%A9cial:Page_au_hasard",
-      "https://www.cdiscount.com/",
-      "https://www.fnac.com/"
+      "https://www.impots.gouv.fr/",
+      "https://www.sorbonne-universite.fr/",
+      "https://www.credit-agricole.fr/",
+      "https://www.sncf.com/",
+      "https://www.amazon.fr/",
+      "https://www.cdiscount.com/"
+    ],
+    "static_urls": [
+      "https://www.service-public.fr/",
+      "https://www.impots.gouv.fr/",
+      "https://www.sorbonne-universite.fr/",
+      "https://www.credit-agricole.fr/",
+      "https://www.sncf.com/",
+      "https://www.amazon.fr/",
+      "https://www.cdiscount.com/"
     ]
   }
 }

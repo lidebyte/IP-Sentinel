@@ -10,11 +10,20 @@
     "white_urls": [
       "https://www.gov.hk/",
       "https://www.hko.gov.hk/",
-      "https://www.scmp.com/",
-      "https://www.hk01.com/",
-      "https://zh.wikipedia.org/wiki/Special:Random",
-      "https://www.hktvmall.com/",
-      "https://www.mtr.com.hk/"
+      "https://www.police.gov.hk/",
+      "https://www.hku.hk/",
+      "https://www.hsbc.com.hk/",
+      "https://www.mtr.com.hk/",
+      "https://www.hktvmall.com/"
+    ],
+    "static_urls": [
+      "https://www.gov.hk/",
+      "https://www.hko.gov.hk/",
+      "https://www.police.gov.hk/",
+      "https://www.hku.hk/",
+      "https://www.hsbc.com.hk/",
+      "https://www.mtr.com.hk/",
+      "https://www.hktvmall.com/"
     ]
   }
 }

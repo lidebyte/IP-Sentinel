@@ -4,17 +4,28 @@
     "base_lat": 35.6812,
     "base_lon": 139.7671,
     "lang_params": "hl=ja&gl=JP",
-    "valid_url_suffix": "com" 
+    "valid_url_suffix": "com"
   },
   "trust_module": {
     "white_urls": [
-      "https://ja.wikipedia.org/wiki/Special:Random",
+      "https://www.japan.go.jp/",
+      "https://www.mhlw.go.jp/",
+      "https://www.u-tokyo.ac.jp/",
+      "https://www.smbc.co.jp/",
+      "https://www.jreast.co.jp/",
       "https://www.yahoo.co.jp/",
-      "https://www.rakuten.co.jp/",
-      "https://www.nhk.or.jp/",
-      "kakaku.com/",
-      "https://www.goo.ne.jp/",
-      "https://www.amazon.co.jp/"
+      "https://www.amazon.co.jp/",
+      "https://www.rakuten.co.jp/"
+    ],
+    "static_urls": [
+      "https://www.japan.go.jp/",
+      "https://www.mhlw.go.jp/",
+      "https://www.u-tokyo.ac.jp/",
+      "https://www.smbc.co.jp/",
+      "https://www.jreast.co.jp/",
+      "https://www.yahoo.co.jp/",
+      "https://www.amazon.co.jp/",
+      "https://www.rakuten.co.jp/"
     ]
   }
 }

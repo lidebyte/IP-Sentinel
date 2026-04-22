@@ -8,13 +8,24 @@
   },
   "trust_module": {
     "white_urls": [
+      "https://www.bundesregierung.de/",
+      "https://www.arbeitsagentur.de/",
+      "https://www.tum.de/",
+      "https://www.sparkasse.de/",
+      "https://www.bahn.de/",
       "https://www.amazon.de/",
-      "https://www.spiegel.de/",
-      "https://www.tagesschau.de/",
-      "https://de.wikipedia.org/wiki/Spezial:Zuf%C3%A4llige_Seite",
       "https://www.ebay.de/",
-      "https://www.bild.de/",
-      "https://www.kicker.de/"
+      "https://www.spiegel.de/"
+    ],
+    "static_urls": [
+      "https://www.bundesregierung.de/",
+      "https://www.arbeitsagentur.de/",
+      "https://www.tum.de/",
+      "https://www.sparkasse.de/",
+      "https://www.bahn.de/",
+      "https://www.amazon.de/",
+      "https://www.ebay.de/",
+      "https://www.spiegel.de/"
     ]
   }
 }

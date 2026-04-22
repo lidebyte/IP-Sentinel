@@ -8,13 +8,24 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://en.wikipedia.org/wiki/Special:Random",
       "https://www.canada.ca/en.html",
-      "https://www.cbc.ca/",
-      "https://www.thestar.com/",
-      "https://www.ctvnews.ca/",
+      "https://www.cra-arc.gc.ca/",
       "https://www.canadapost-postescanada.ca/",
-      "https://www.td.com/"
+      "https://www.utoronto.ca/",
+      "https://www.td.com/",
+      "https://www.rbcroyalbank.com/",
+      "https://www.amazon.ca/",
+      "https://www.theweathernetwork.com/ca"
+    ],
+    "static_urls": [
+      "https://www.canada.ca/en.html",
+      "https://www.cra-arc.gc.ca/",
+      "https://www.canadapost-postescanada.ca/",
+      "https://www.utoronto.ca/",
+      "https://www.td.com/",
+      "https://www.rbcroyalbank.com/",
+      "https://www.amazon.ca/",
+      "https://www.theweathernetwork.com/ca"
     ]
   }
 }

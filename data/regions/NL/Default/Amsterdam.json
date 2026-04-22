@@ -8,13 +8,22 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://nl.wikipedia.org/wiki/Speciaal:Willekeurig",
       "https://www.rijksoverheid.nl/",
-      "https://www.nos.nl/",
+      "https://www.belastingdienst.nl/",
+      "https://www.ing.nl/",
+      "https://www.ns.nl/",
       "https://www.bol.com/",
-      "https://www.nu.nl/",
-      "https://www.buienradar.nl/",
-      "https://www.telegraaf.nl/"
+      "https://www.marktplaats.nl/",
+      "https://www.buienradar.nl/"
+    ],
+    "static_urls": [
+      "https://www.rijksoverheid.nl/",
+      "https://www.belastingdienst.nl/",
+      "https://www.ing.nl/",
+      "https://www.ns.nl/",
+      "https://www.bol.com/",
+      "https://www.marktplaats.nl/",
+      "https://www.buienradar.nl/"
     ]
   }
 }

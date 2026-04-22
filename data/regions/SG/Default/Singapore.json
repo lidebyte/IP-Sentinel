@@ -8,13 +8,24 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://www.straitstimes.com/",
-      "https://www.channelnewsasia.com/",
       "https://www.gov.sg/",
-      "https://shopee.sg/",
-      "https://en.wikipedia.org/wiki/Special:Random",
-      "https://www.fairprice.com.sg/",
-      "https://www.dbs.com.sg/"
+      "https://www.cpf.gov.sg/",
+      "https://www.iras.gov.sg/",
+      "https://www.singpass.gov.sg/",
+      "https://www.nus.edu.sg/",
+      "https://www.dbs.com.sg/",
+      "https://www.shopee.sg/",
+      "https://www.fairprice.com.sg/"
+    ],
+    "static_urls": [
+      "https://www.gov.sg/",
+      "https://www.cpf.gov.sg/",
+      "https://www.iras.gov.sg/",
+      "https://www.singpass.gov.sg/",
+      "https://www.nus.edu.sg/",
+      "https://www.dbs.com.sg/",
+      "https://www.shopee.sg/",
+      "https://www.fairprice.com.sg/"
     ]
   }
 }

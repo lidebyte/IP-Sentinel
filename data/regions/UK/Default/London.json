@@ -8,12 +8,23 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://www.bbc.co.uk/",
       "https://www.gov.uk/",
-      "https://www.amazon.co.uk/",
-      "https://www.theguardian.com/uk",
       "https://www.nhs.uk/",
-      "https://en.wikipedia.org/wiki/Special:Random",
+      "https://www.ox.ac.uk/",
+      "https://www.barclays.co.uk/",
+      "https://www.postoffice.co.uk/",
+      "https://www.nationalrail.co.uk/",
+      "https://www.amazon.co.uk/",
+      "https://www.ebay.co.uk/"
+    ],
+    "static_urls": [
+      "https://www.gov.uk/",
+      "https://www.nhs.uk/",
+      "https://www.ox.ac.uk/",
+      "https://www.barclays.co.uk/",
+      "https://www.postoffice.co.uk/",
+      "https://www.nationalrail.co.uk/",
+      "https://www.amazon.co.uk/",
       "https://www.ebay.co.uk/"
     ]
   }

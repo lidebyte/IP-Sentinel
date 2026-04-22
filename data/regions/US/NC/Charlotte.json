@@ -1,5 +1,35 @@
 {
   "region_name": "United States - Charlotte",
-  "google_module": { "base_lat": 35.2271, "base_lon": -80.8431, "lang_params": "hl=en&gl=US", "valid_url_suffix": "com" },
-  "trust_module": { "white_urls": [ "https://en.wikipedia.org/wiki/Special:Random", "https://www.yahoo.com/", "https://www.target.com/", "https://www.npr.org/", "https://www.weather.com/", "https://www.amazon.com/", "https://www.cdc.gov/" ] }
+  "google_module": {
+    "base_lat": 35.2271,
+    "base_lon": -80.8431,
+    "lang_params": "hl=en&gl=US",
+    "valid_url_suffix": "com"
+  },
+  "trust_module": {
+    "white_urls": [
+      "https://www.usa.gov/",
+      "https://www.irs.gov/",
+      "https://www.cdc.gov/",
+      "https://www.harvard.edu/",
+      "https://www.chase.com/",
+      "https://www.bankofamerica.com/",
+      "https://www.amazon.com/",
+      "https://www.target.com/",
+      "https://www.walmart.com/",
+      "https://www.usps.com/"
+    ],
+    "static_urls": [
+      "https://www.usa.gov/",
+      "https://www.irs.gov/",
+      "https://www.cdc.gov/",
+      "https://www.harvard.edu/",
+      "https://www.chase.com/",
+      "https://www.bankofamerica.com/",
+      "https://www.amazon.com/",
+      "https://www.target.com/",
+      "https://www.walmart.com/",
+      "https://www.usps.com/"
+    ]
+  }
 }
