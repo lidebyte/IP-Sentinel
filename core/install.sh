@@ -665,7 +665,7 @@ EOF
 [Unit]
 Description=Timer for IP-Sentinel Runner Service
 [Timer]
-OnBootSec=10
+OnActiveSec=10s
 OnUnitActiveSec=30min
 RandomizedDelaySec=180
 Persistent=true
