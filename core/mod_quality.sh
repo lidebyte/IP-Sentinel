@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================================
-# IP-Sentinel: 深海声呐 (IP 质量全维异步检测模块终极情报版)
+# IP-Sentinel: 深海声呐 (IP 质量全维异步检测模块 v4.0.0)
 # ==========================================================
 
 source /opt/ip_sentinel/config.conf
@@ -8,10 +8,13 @@ source /opt/ip_sentinel/config.conf
 TARGET_IP=$(echo "${BIND_IP:-$PUBLIC_IP}" | tr -d '[]')
 IP_PROTO="${IP_PREF:-4}"
 
-# 1. 静默拉取 JSON (剔除头部广告杂音)
-JSON_DATA=$(timeout 180 bash <(curl -sL https://IP.Check.Place) -y -j -${IP_PROTO} -i "${TARGET_IP}" 2>/dev/null | sed -n '/^{/,$p')
+# 1. 静默拉取 JSON (去除引发截断的 sed，恢复稳定的纯净拉取方式)
+JSON_DATA=$(timeout 180 bash <(curl -sL https://IP.Check.Place) -y -j -${IP_PROTO} -i "${TARGET_IP}" 2>/dev/null)
 
-if [ -z "$JSON_DATA" ] || ! echo "$JSON_DATA" | jq . >/dev/null 2>&1; then
+# 2. 提取基础物理定位与身份特征 (兼作合法性校验)
+IP_ADDR=$(echo "$JSON_DATA" | jq -r '.Head.IP // empty' 2>/dev/null)
+
+if [ -z "$IP_ADDR" ]; then
     curl -s -X POST "${TG_API_URL}" \
         -d "chat_id=${CHAT_ID}" \
         -d "parse_mode=Markdown" \
@@ -22,22 +25,20 @@ if [ -z "$JSON_DATA" ] || ! echo "$JSON_DATA" | jq . >/dev/null 2>&1; then
     exit 1
 fi
 
-# 2. 提取基础物理定位与身份特征
-IP_ADDR=$(echo "$JSON_DATA" | jq -r '.Head.IP // empty')
 [ -z "$IP_ADDR" ] && IP_ADDR="$PUBLIC_IP"
-ASN=$(echo "$JSON_DATA" | jq -r '.Info.ASN // "Unknown"')
-ORG=$(echo "$JSON_DATA" | jq -r '.Info.Organization // "Unknown"')
-CITY=$(echo "$JSON_DATA" | jq -r '.Info.City.Name // "Unknown"')
-COUNTRY=$(echo "$JSON_DATA" | jq -r '.Info.Region.Name // "Unknown"')
-IP_TYPE=$(echo "$JSON_DATA" | jq -r '.Info.Type // "未知属性"')
-USAGE_TYPE=$(echo "$JSON_DATA" | jq -r '.Type.Usage.IPinfo // "未知场景"')
+ASN=$(echo "$JSON_DATA" | jq -r '.Info.ASN // "Unknown"' 2>/dev/null)
+ORG=$(echo "$JSON_DATA" | jq -r '.Info.Organization // "Unknown"' 2>/dev/null)
+CITY=$(echo "$JSON_DATA" | jq -r '.Info.City.Name // "Unknown"' 2>/dev/null)
+COUNTRY=$(echo "$JSON_DATA" | jq -r '.Info.Region.Name // "Unknown"' 2>/dev/null)
+IP_TYPE=$(echo "$JSON_DATA" | jq -r '.Info.Type // "未知属性"' 2>/dev/null)
+USAGE_TYPE=$(echo "$JSON_DATA" | jq -r '.Type.Usage.IPinfo // "未知场景"' 2>/dev/null)
 
 # 3. 深度欺诈与信用评估 (各大权威库联查)
-SCAM_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.SCAMALYTICS // "0"')
-ABUSE_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.AbuseIPDB // "0"')
-IPQS_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.IPQS // "0"')
-IP2L_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.IP2LOCATION // "0"')
-FRAUD_RISK=$(echo "$JSON_DATA" | jq -r '.Score.ipapi // "0%"')
+SCAM_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.SCAMALYTICS // "0"' 2>/dev/null)
+ABUSE_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.AbuseIPDB // "0"' 2>/dev/null)
+IPQS_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.IPQS // "0"' 2>/dev/null)
+IP2L_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.IP2LOCATION // "0"' 2>/dev/null)
+FRAUD_RISK=$(echo "$JSON_DATA" | jq -r '.Score.ipapi // "0%"' 2>/dev/null)
 
 # 代理/VPN 特征探针 (只要有一家认为是代理，就亮黄灯)
 IS_PROXY="🟢 干净"
@@ -48,9 +49,9 @@ fi
 
 # 4. 提取流媒体与 AI 解锁指标 (带解锁类型)
 parse_media() {
-    local status=$(echo "$JSON_DATA" | jq -r ".Media.$1.Status // \"未知\"")
-    local reg=$(echo "$JSON_DATA" | jq -r ".Media.$1.Region // \"\"")
-    local type=$(echo "$JSON_DATA" | jq -r ".Media.$1.Type // \"\"")
+    local status=$(echo "$JSON_DATA" | jq -r ".Media.$1.Status // \"未知\"" 2>/dev/null)
+    local reg=$(echo "$JSON_DATA" | jq -r ".Media.$1.Region // \"\"" 2>/dev/null)
+    local type=$(echo "$JSON_DATA" | jq -r ".Media.$1.Type // \"\"" 2>/dev/null)
     
     if [[ "$status" == *"解锁"* ]]; then
         echo "🟢 $reg ($type)"
@@ -69,15 +70,15 @@ GPT_STAT=$(parse_media "ChatGPT")
 APV_STAT=$(parse_media "AmazonPrimeVideo")
 
 # 提取原生 JSON 里的原始状态用于底层隐写回传
-RAW_NF_STAT=$(echo "$JSON_DATA" | jq -r '.Media.Netflix.Status // "Unknown"')
-RAW_YT_REG=$(echo "$JSON_DATA" | jq -r '.Media.Youtube.Region // ""')
-RAW_YT_STAT=$(echo "$JSON_DATA" | jq -r '.Media.Youtube.Status // "Unknown"')
+RAW_NF_STAT=$(echo "$JSON_DATA" | jq -r '.Media.Netflix.Status // "Unknown"' 2>/dev/null)
+RAW_YT_REG=$(echo "$JSON_DATA" | jq -r '.Media.Youtube.Region // ""' 2>/dev/null)
+RAW_YT_STAT=$(echo "$JSON_DATA" | jq -r '.Media.Youtube.Status // "Unknown"' 2>/dev/null)
 
 # 5. 邮局连通性与黑名单
-PORT25=$(echo "$JSON_DATA" | jq -r '.Mail.Port25 // "false"')
+PORT25=$(echo "$JSON_DATA" | jq -r '.Mail.Port25 // "false"' 2>/dev/null)
 [ "$PORT25" == "true" ] && P25_TEXT="✅ 畅通" || P25_TEXT="❌ 封堵"
-DNS_BLACK=$(echo "$JSON_DATA" | jq -r '.Mail.DNSBlacklist.Blacklisted // "0"')
-DNS_MARK=$(echo "$JSON_DATA" | jq -r '.Mail.DNSBlacklist.Marked // "0"')
+DNS_BLACK=$(echo "$JSON_DATA" | jq -r '.Mail.DNSBlacklist.Blacklisted // "0"' 2>/dev/null)
+DNS_MARK=$(echo "$JSON_DATA" | jq -r '.Mail.DNSBlacklist.Marked // "0"' 2>/dev/null)
 
 # 6. “送中” 逻辑判定
 WARNING_MSG=""
