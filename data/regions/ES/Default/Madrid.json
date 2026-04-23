@@ -8,28 +8,13 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://elpais.com/aniversario/2026-04-20/antonio-munoz-molina-escritor-las-fuerzas-mas-poderosas-estan-desmontando-el-periodismo.html",
-      "https://www.santander.es/",
-      "https://elpais.com/clima-y-medio-ambiente/2026-04-19/son-seguras-las-presas-espanolas-asi-afecta-a-estas-construcciones-un-clima-mas-extremo.html",
-      "https://elpais.com/argentina/2026-04-21/una-de-las-hijas-de-maradona-acusa-a-los-medicos-juzgados-por-la-muerte-de-su-padre-la-manipulacion-fue-absoluta-y-horrible.html",
-      "https://elpais.com/elviajero/guia-el-viajero/2026-04-20/estambul-que-hay-de-nuevo-en-la-ciudad-turca.html",
-      "https://elpais.com/elviajero/escapadas/espana/2026-04-22/bodegas-un-tesoro-extraterrestre-y-un-castillo-medieval-convierten-a-villena-en-una-alternativa-al-circuito-turistico-de-alicante.html",
-      "https://elpais.com/eps/2026-04-17/la-desconocida-historia-de-supervivencia-de-jaime-urrutia-ex-gabinete-caligari-un-infarto-y-mas-problemas-de-salud-de-un-grande-de-la-movida.html",
-      "https://administracion.gob.es/",
-      "https://elpais.com/escaparate/estilo-de-vida/2026-04-22/mopa-con-pulverizador.html",
-      "https://elpais.com/economia/negocios/2026-04-19/joseph-stiglitz-premio-nobel-de-economia-la-ideologia-de-los-millonarios-tiene-actualmente-un-grado-de-egoismo-alucinante.html",
-      "https://elpais.com/deportes/futbol/2026-04-21/el-gol-de-guruzeta-y-las-manos-de-simon-devuelven-el-aire-al-athletic.html",
-      "https://elpais.com/comunicacion/2026-04-19/marc-bassets-nuevo-subdirector-de-opinion-de-el-pais.html",
-      "https://www.zara.com/es/",
-      "https://elpais.com/ideas/2026-04-19/la-prioridad-extremena-no-aparece-en-el-pacto-de-pp-y-vox.html",
-      "https://elpais.com/espana/catalunya/2026-04-22/salvador-illa-pide-sentido-comun-a-la-audiencia-tras-citar-presencialmente-a-jordi-pujol-en-madrid.html",
-      "https://elpais.com/icon/2026-04-22/alejo-sauras-me-da-pena-que-ahora-cada-miembro-de-la-familia-tenga-su-pantalla-y-no-vean-la-tele-juntos.html",
-      "https://www.amazon.es/",
+      "https://www.elcorteingles.es/",
       "https://www.agenciatributaria.es/",
       "https://www.renfe.com/",
-      "https://www.elcorteingles.es/",
-      "https://elpais.com/espana/2026-04-22/hacienda-calcula-que-aldama-defraudo-24-millones-de-los-ingresos-del-negocio-de-las-mascarillas.html",
-      "https://elpais.com/economia/2026-04-22/elon-musk-eleva-su-obsesion-por-la-ia-spacex-se-hace-con-una-opcion-de-compra-por-cursor-de-60000-millones-de-dolares.html"
+      "https://administracion.gob.es/",
+      "https://www.zara.com/es/",
+      "https://www.amazon.es/",
+      "https://www.santander.es/"
     ],
     "static_urls": [
       "https://administracion.gob.es/",

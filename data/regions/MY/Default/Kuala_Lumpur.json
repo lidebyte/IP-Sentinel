@@ -1,0 +1,35 @@
+{
+  "region_name": "Malaysia - Kuala Lumpur",
+  "google_module": {
+    "base_lat": 3.139,
+    "base_lon": 101.6869,
+    "lang_params": "hl=en-MY&gl=MY",
+    "valid_url_suffix": "com.my"
+  },
+  "trust_module": {
+    "white_urls": [
+      "https://www.cimbclicks.com.my/",
+      "https://www.maybank2u.com.my/",
+      "https://www.pos.com.my/",
+      "https://www.lazada.com.my/",
+      "https://shopee.com.my/",
+      "https://um.edu.my/",
+      "https://www.hasil.gov.my/",
+      "https://www.malaysia.gov.my/",
+      "https://www.kwsp.gov.my/",
+      "https://www.thestar.com.my/"
+    ],
+    "static_urls": [
+      "https://www.malaysia.gov.my/",
+      "https://www.hasil.gov.my/",
+      "https://www.kwsp.gov.my/",
+      "https://um.edu.my/",
+      "https://www.maybank2u.com.my/",
+      "https://www.cimbclicks.com.my/",
+      "https://www.thestar.com.my/",
+      "https://shopee.com.my/",
+      "https://www.lazada.com.my/",
+      "https://www.pos.com.my/"
+    ]
+  }
+}

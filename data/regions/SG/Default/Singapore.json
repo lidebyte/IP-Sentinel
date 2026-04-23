@@ -8,29 +8,14 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://www.channelnewsasia.com/business/microsoft-integrate-anthropics-mythos-its-security-development-program-6074291",
-      "https://www.channelnewsasia.com/business/eu-may-let-startups-claim-innovation-benefits-in-ma-if-big-tech-not-involved-6074156",
-      "https://www.cpf.gov.sg/",
-      "https://www.channelnewsasia.com/sport/floundering-chelsea-sack-rosenior-amid-worst-scoring-drought-in-114-years-6074221",
-      "https://www.singpass.gov.sg/",
       "https://www.iras.gov.sg/",
+      "https://www.singpass.gov.sg/",
       "https://www.fairprice.com.sg/",
-      "https://www.channelnewsasia.com/business/uk-financial-sector-prepared-mythos-and-others-says-boe-co-chaired-group-6074401",
-      "https://www.channelnewsasia.com/business/linkedin-names-insider-daniel-shapero-new-ceo-6074371",
       "https://www.dbs.com.sg/",
-      "https://www.channelnewsasia.com/business/goldman-sachs-settles-shareholder-lawsuit-over-1mdb-scandal-6074526",
-      "https://www.channelnewsasia.com/sport/nfl-defends-broadcasting-strategy-regulators-probe-shift-pay-tv-6074521",
-      "https://www.channelnewsasia.com/world/italy-bookingcom-travel-police-accommodation-6074281",
-      "https://www.gov.sg/",
-      "https://www.channelnewsasia.com/business/explainer-how-deutsche-telecom-and-t-mobile-us-could-pull-worlds-biggest-ma-deal-6074346",
-      "https://www.channelnewsasia.com/business/tsmc-shows-smaller-faster-chips-without-pricey-new-tool-asml-6074491",
-      "https://www.channelnewsasia.com/business/tsmc-plans-open-chip-packaging-plant-in-arizona-2029-executive-says-6074496",
-      "https://www.channelnewsasia.com/asia/myanmar-aung-san-suu-kyi-junta-thailand-6074161",
-      "https://www.channelnewsasia.com/sport/germanys-gnabry-says-he-out-world-cup-after-adductor-muscle-tear-6074321",
-      "https://www.channelnewsasia.com/sport/banorte-pushes-cashless-payments-azteca-world-cup-deadline-nears-6074231",
+      "https://www.shopee.sg/",
       "https://www.nus.edu.sg/",
-      "https://www.channelnewsasia.com/sport/de-la-hoya-alis-grandson-warn-us-lawmakers-against-boxing-law-overhaul-6074361",
-      "https://www.shopee.sg/"
+      "https://www.cpf.gov.sg/",
+      "https://www.gov.sg/"
     ],
     "static_urls": [
       "https://www.gov.sg/",

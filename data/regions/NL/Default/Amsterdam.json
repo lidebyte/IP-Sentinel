@@ -8,28 +8,13 @@
   },
   "trust_module": {
     "white_urls": [
-      "https://www.marktplaats.nl/",
-      "https://nos.nl/l/2611576",
-      "https://nos.nl/l/2611598",
-      "https://www.bol.com/",
-      "https://www.belastingdienst.nl/",
-      "https://nos.nl/l/2611569",
-      "https://nos.nl/l/2611600",
-      "https://nos.nl/l/2611561",
-      "https://nos.nl/l/2611550",
       "https://www.buienradar.nl/",
-      "https://www.rijksoverheid.nl/",
-      "https://nos.nl/l/2611579",
-      "https://nos.nl/l/2611540",
-      "https://nos.nl/l/2611599",
+      "https://www.belastingdienst.nl/",
+      "https://www.marktplaats.nl/",
       "https://www.ns.nl/",
+      "https://www.bol.com/",
       "https://www.ing.nl/",
-      "https://nos.nl/l/2611596",
-      "https://nos.nl/l/2611572",
-      "https://nos.nl/l/2611565",
-      "https://nos.nl/l/2611543",
-      "https://nos.nl/l/2611568",
-      "https://nos.nl/l/2611544"
+      "https://www.rijksoverheid.nl/"
     ],
     "static_urls": [
       "https://www.rijksoverheid.nl/",

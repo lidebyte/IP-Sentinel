@@ -11,7 +11,16 @@
           "name": "Japan (日本)",
           "keyword_file": "kw_JP.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Tokyo", "name": "Tokyo (东京)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Tokyo",
+                  "name": "Tokyo (东京)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -19,7 +28,16 @@
           "name": "Singapore (新加坡)",
           "keyword_file": "kw_SG.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Singapore", "name": "Singapore (新加坡)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Singapore",
+                  "name": "Singapore (新加坡)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -27,7 +45,16 @@
           "name": "South Korea (韩国)",
           "keyword_file": "kw_KR.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Seoul", "name": "Seoul (首尔)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Seoul",
+                  "name": "Seoul (首尔)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -35,7 +62,16 @@
           "name": "Hong Kong (香港)",
           "keyword_file": "kw_HK.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "HongKong", "name": "Hong Kong (香港)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "HongKong",
+                  "name": "Hong Kong (香港)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -43,7 +79,16 @@
           "name": "Vietnam (越南)",
           "keyword_file": "kw_VN.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Hanoi", "name": "Hanoi (河内)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Hanoi",
+                  "name": "Hanoi (河内)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -51,7 +96,33 @@
           "name": "Taiwan (台湾)",
           "keyword_file": "kw_TW.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Taipei", "name": "Taipei (台北)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Taipei",
+                  "name": "Taipei (台北)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "MY",
+          "name": "Malaysia (马来西亚)",
+          "keyword_file": "kw_MY.txt",
+          "states": [
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Kuala_Lumpur",
+                  "name": "Kuala Lumpur (吉隆坡)"
+                }
+              ]
+            }
           ]
         }
       ]
@@ -69,8 +140,14 @@
               "id": "Default",
               "name": "Default State",
               "cities": [
-                { "id": "London", "name": "London (伦敦)" },
-                { "id": "Coventry", "name": "Coventry (考文垂)" }
+                {
+                  "id": "London",
+                  "name": "London (伦敦)"
+                },
+                {
+                  "id": "Coventry",
+                  "name": "Coventry (考文垂)"
+                }
               ]
             }
           ]
@@ -80,7 +157,16 @@
           "name": "Germany (德国)",
           "keyword_file": "kw_DE.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Frankfurt", "name": "Frankfurt (法兰克福)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Frankfurt",
+                  "name": "Frankfurt (法兰克福)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -88,7 +174,16 @@
           "name": "France (法国)",
           "keyword_file": "kw_FR.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Paris", "name": "Paris (巴黎)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Paris",
+                  "name": "Paris (巴黎)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -96,7 +191,16 @@
           "name": "Netherlands (荷兰)",
           "keyword_file": "kw_NL.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Amsterdam", "name": "Amsterdam (阿姆斯特丹)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Amsterdam",
+                  "name": "Amsterdam (阿姆斯特丹)"
+                }
+              ]
+            }
           ]
         },
         {
@@ -104,7 +208,16 @@
           "name": "Spain (西班牙)",
           "keyword_file": "kw_ES.txt",
           "states": [
-            { "id": "Default", "name": "Default State", "cities": [ { "id": "Madrid", "name": "Madrid (马德里)" } ] }
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Madrid",
+                  "name": "Madrid (马德里)"
+                }
+              ]
+            }
           ]
         }
       ]
@@ -122,50 +235,74 @@
               "id": "CA",
               "name": "California (加州)",
               "cities": [
-                { "id": "Los_Angeles", "name": "Los Angeles (洛杉矶)" },
-                { "id": "San_Jose", "name": "San Jose (圣何塞)" }
+                {
+                  "id": "Los_Angeles",
+                  "name": "Los Angeles (洛杉矶)"
+                },
+                {
+                  "id": "San_Jose",
+                  "name": "San Jose (圣何塞)"
+                }
               ]
             },
             {
               "id": "IL",
               "name": "Illinois (伊利诺伊州)",
               "cities": [
-                { "id": "Warrenville", "name": "Warrenville (沃伦维尔)" }
+                {
+                  "id": "Warrenville",
+                  "name": "Warrenville (沃伦维尔)"
+                }
               ]
             },
             {
               "id": "NC",
               "name": "North Carolina (北卡罗来纳州)",
               "cities": [
-                { "id": "Charlotte", "name": "Charlotte (夏洛特)" }
+                {
+                  "id": "Charlotte",
+                  "name": "Charlotte (夏洛特)"
+                }
               ]
             },
             {
               "id": "NV",
               "name": "Nevada (内华达州)",
               "cities": [
-                { "id": "Las_Vegas", "name": "Las Vegas (拉斯维加斯)" }
+                {
+                  "id": "Las_Vegas",
+                  "name": "Las Vegas (拉斯维加斯)"
+                }
               ]
             },
             {
               "id": "OR",
               "name": "Oregon (俄勒冈州)",
               "cities": [
-                { "id": "Bend", "name": "Bend (本德)" }
+                {
+                  "id": "Bend",
+                  "name": "Bend (本德)"
+                }
               ]
             },
             {
               "id": "UT",
               "name": "Utah (犹他州)",
               "cities": [
-                { "id": "Salt_Lake_City", "name": "Salt Lake City (盐湖城)" }
+                {
+                  "id": "Salt_Lake_City",
+                  "name": "Salt Lake City (盐湖城)"
+                }
               ]
             },
             {
               "id": "WA",
               "name": "Washington (华盛顿州)",
               "cities": [
-                { "id": "Seattle", "name": "Seattle (西雅图)" }
+                {
+                  "id": "Seattle",
+                  "name": "Seattle (西雅图)"
+                }
               ]
             }
           ]
@@ -179,8 +316,14 @@
               "id": "Default",
               "name": "Default State",
               "cities": [
-                { "id": "Toronto", "name": "Toronto (多伦多)" },
-                { "id": "Montreal", "name": "Montreal (蒙特利尔)" }
+                {
+                  "id": "Toronto",
+                  "name": "Toronto (多伦多)"
+                },
+                {
+                  "id": "Montreal",
+                  "name": "Montreal (蒙特利尔)"
+                }
               ]
             }
           ]
@@ -200,35 +343,50 @@
               "id": "NSW",
               "name": "New South Wales (新南威尔士州)",
               "cities": [
-                { "id": "Sydney", "name": "Sydney (悉尼)" }
+                {
+                  "id": "Sydney",
+                  "name": "Sydney (悉尼)"
+                }
               ]
             },
             {
               "id": "VIC",
               "name": "Victoria (维多利亚州)",
               "cities": [
-                { "id": "Melbourne", "name": "Melbourne (墨尔本)" }
+                {
+                  "id": "Melbourne",
+                  "name": "Melbourne (墨尔本)"
+                }
               ]
             },
             {
               "id": "QLD",
               "name": "Queensland (昆士兰州)",
               "cities": [
-                { "id": "Brisbane", "name": "Brisbane (布里斯班)" }
+                {
+                  "id": "Brisbane",
+                  "name": "Brisbane (布里斯班)"
+                }
               ]
             },
             {
               "id": "WA",
               "name": "Western Australia (西澳大利亚州)",
               "cities": [
-                { "id": "Perth", "name": "Perth (珀斯)" }
+                {
+                  "id": "Perth",
+                  "name": "Perth (珀斯)"
+                }
               ]
             },
             {
               "id": "SA",
               "name": "South Australia (南澳大利亚州)",
               "cities": [
-                { "id": "Adelaide", "name": "Adelaide (阿德莱德)" }
+                {
+                  "id": "Adelaide",
+                  "name": "Adelaide (阿德莱德)"
+                }
               ]
             }
           ]
