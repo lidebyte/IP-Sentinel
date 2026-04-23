@@ -880,12 +880,15 @@ echo "🗑️ 若未来需卸载，可重新运行本脚本选择[2]或执行: b
 echo "========================================================"
 
 # ================== [v3.1.2 新增: 玻璃房透明装机统计] ==================
-echo -e "\n📡 正在向开源社区汇报装机量 (完全匿名，不收集IP)..."
-AGENT_COUNT=$(curl -s -m 3 "https://ip-sentinel-count.samanthaestime296.workers.dev/ping/agent" || echo "")
+# [修复] 仅在全新部署时触发统计，平滑升级/OTA 时绝对不触发，防止配额耗尽与数据注水
+if [ "$UPGRADE_MODE" == "false" ]; then
+    echo -e "\n📡 正在向开源社区汇报装机量 (完全匿名，不收集IP)..."
+    AGENT_COUNT=$(curl -s -m 3 "https://ip-sentinel-count.samanthaestime296.workers.dev/ping/agent" || echo "")
 
-if [ -n "$AGENT_COUNT" ] && [[ "$AGENT_COUNT" =~ ^[0-9]+$ ]]; then
-    echo -e "\033[32m✅ 感谢您成为全球第 ${AGENT_COUNT} 名 IP-Sentinel 哨兵！\033[0m"
-else
-    echo -e "\033[32m✅ 感谢您加入 IP-Sentinel 哨兵阵列！\033[0m"
+    if [ -n "$AGENT_COUNT" ] && [[ "$AGENT_COUNT" =~ ^[0-9]+$ ]]; then
+        echo -e "\033[32m✅ 感谢您成为全球第 ${AGENT_COUNT} 名 IP-Sentinel 哨兵！\033[0m"
+    else
+        echo -e "\033[32m✅ 感谢您加入 IP-Sentinel 哨兵阵列！\033[0m"
     fi
-echo -e "\n"
+    echo -e "\n"
+fi
