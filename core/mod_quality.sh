@@ -181,10 +181,11 @@ RAW_GOOG_STAT="${RAW_YT_REG:-$RAW_YT_STAT}"
 [ -z "$RAW_GOOG_STAT" ] && RAW_GOOG_STAT="未知"
 RAW_GPT_STAT=$(echo "$JSON_DATA" | jq -r '.Media.ChatGPT.Status // "未知"' 2>/dev/null)
 
-# 截取前2个中文字符(控制在64字节内)，构建内联按钮数据
-S_GOOG=$(echo "$RAW_GOOG_STAT" | awk '{print substr($0,1,2)}')
-S_NF=$(echo "$RAW_NF_STAT" | awk '{print substr($0,1,2)}')
-S_GPT=$(echo "$RAW_GPT_STAT" | awk '{print substr($0,1,2)}')
+# [修复] 废除会导致中文 UTF-8 字节被劈裂（产生乱码 ）的 awk 暴力截断。
+# 原始状态文本极短（如"解锁"、"屏蔽"、"US"），只需洗掉隐形换行符即可安全传输。
+S_GOOG=$(echo "$RAW_GOOG_STAT" | tr -d '\n\r ')
+S_NF=$(echo "$RAW_NF_STAT" | tr -d '\n\r ')
+S_GPT=$(echo "$RAW_GPT_STAT" | tr -d '\n\r ')
 CB_DATA="svq|${NODE_NAME}|${SAFE_SCAM_SCORE}|${S_GOOG}|${S_NF}|${S_GPT}"
 
 # 8. 挂载内联键盘并直送指挥部
