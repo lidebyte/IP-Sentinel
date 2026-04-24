@@ -10,7 +10,7 @@ CONF="/opt/ip_sentinel_master/master.conf"
 source "$CONF"
 
 # [核心: 运行态版本继承与云通信地址]
-REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/dev/v4.0.0-sonar"
+REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/main"
 # 临时改为开发地址用于测试
 # REPO_RAW_URL="https://raw.githubusercontent.com/hotyue/IP-Sentinel/v3.6.2-rc"
 # MASTER_VERSION 已经在上方的 source "$CONF" 中被载入

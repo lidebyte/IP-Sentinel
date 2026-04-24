@@ -401,7 +401,7 @@ class AgentHandler(http.server.BaseHTTPRequestHandler):
                 # [修复] 逃逸 Systemd Cgroup，并引入 bash -n 语法树校验防砖机制
                 import shutil
                 import base64
-                repo_url = "https://raw.githubusercontent.com/hotyue/IP-Sentinel/dev/v4.0.0-sonar"
+                repo_url = "https://raw.githubusercontent.com/hotyue/IP-Sentinel/main"
                 
                 # 动态构建报错回执文本 (第一层 Base64 隔离换行与特殊字符)
                 err_msg = f"❌ **OTA 熔断告警**\n📍 节点: `{config_mem.get('NODE_ALIAS', '未知')}`\n⚠️ 原因: 脚本语法校验(bash -n)未通过，下载可能不完整。\n🚀 状态: 升级已取消，节点安全。"
