@@ -83,7 +83,7 @@ db_exec "ALTER TABLE nodes ADD COLUMN enable_trust TEXT DEFAULT 'true';" 2>/dev/
 db_exec "ALTER TABLE nodes ADD COLUMN enable_ota TEXT DEFAULT 'false';" 2>/dev/null
 # ========================================================================
 
-# ================== [v4.0.0 核心: 增加 IP 质量趋势追踪表] ==================
+# ================== [v4.0.0/v4.0.2 核心: 增加 IP 质量趋势追踪表] ==================
 db_exec "CREATE TABLE IF NOT EXISTS ip_trend_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     node_name TEXT,
@@ -91,6 +91,9 @@ db_exec "CREATE TABLE IF NOT EXISTS ip_trend_log (
     scam_score INTEGER,
     nf_status TEXT
 );" 2>/dev/null
+# [v4.0.2 热更新] 动态扩容 谷歌 与 ChatGPT 状态追踪字段
+db_exec "ALTER TABLE ip_trend_log ADD COLUMN goog_status TEXT DEFAULT 'Unknown';" 2>/dev/null
+db_exec "ALTER TABLE ip_trend_log ADD COLUMN gpt_status TEXT DEFAULT 'Unknown';" 2>/dev/null
 # ========================================================================
 
 # --- 核心轮询循环 ---
@@ -108,18 +111,25 @@ while true; do
             CHAT_ID=$(echo "$UPDATE" | jq -r '.message.chat.id // .callback_query.message.chat.id')
             TEXT=$(echo "$UPDATE" | jq -r '.message.text // .callback_query.data')
 
-            # ================== [v4.0.0 新增: 深海声呐暗号拦截与落盘] ==================
+            # ================== [v4.0.2 核心: 深海声呐暗号拦截与落盘] ==================
             if [[ "$TEXT" == *"[SYSTEM_REPORT]|QUALITY|"* ]]; then
-                # 截获系统隐写报告，提取分数并存库 (格式: [SYSTEM_REPORT]|QUALITY|NODE_NAME|SCORE|NF_STAT)
+                # 格式: [SYSTEM_REPORT]|QUALITY|NODE_NAME|SCORE|GOOG_STAT|NF_STAT|GPT_STAT
                 REPORT_DATA=$(echo "$TEXT" | grep -o "\[SYSTEM_REPORT\].*")
                 NODE_ID=$(echo "$REPORT_DATA" | cut -d'|' -f3 | tr -cd 'a-zA-Z0-9_.-')
                 SCORE=$(echo "$REPORT_DATA" | cut -d'|' -f4 | tr -cd '0-9')
-                NF_ST=$(echo "$REPORT_DATA" | cut -d'|' -f5 | tr -cd 'a-zA-Z0-9_-')
+                
+                # [v4.0.2 修复] 放弃极端的字母白名单，改用黑名单过滤引号和分号，完美保留中文状态
+                GOOG_ST=$(echo "$REPORT_DATA" | cut -d'|' -f5 | tr -d '\r\n;\"\'\`')
+                NF_ST=$(echo "$REPORT_DATA" | cut -d'|' -f6 | tr -d '\r\n;\"\'\`')
+                GPT_ST=$(echo "$REPORT_DATA" | cut -d'|' -f7 | tr -d '\r\n;\"\'\`')
+                
+                [ -z "$GOOG_ST" ] && GOOG_ST="Unknown"
+                [ -z "$NF_ST" ] && NF_ST="Unknown"
+                [ -z "$GPT_ST" ] && GPT_ST="Unknown"
                 
                 if [ -n "$NODE_ID" ] && [ -n "$SCORE" ]; then
-                    db_exec "INSERT INTO ip_trend_log (node_name, scam_score, nf_status) VALUES ('$NODE_ID', '$SCORE', '$NF_ST');"
+                    db_exec "INSERT INTO ip_trend_log (node_name, scam_score, goog_status, nf_status, gpt_status) VALUES ('$NODE_ID', '$SCORE', '$GOOG_ST', '$NF_ST', '$GPT_ST');"
                 fi
-                # 无需回复用户，因为 Agent 原战报已发在群中
                 continue
             fi
             # ======================================================================
@@ -774,11 +784,11 @@ while true; do
 
 
                 trend:*)
-                    # [v4.0.0 新增: 生成 IP 质量趋势图]
+                    # [v4.0.2 优化: 扩容 15 次追踪并引入 GOOG/GPT 状态]
                     TARGET_NODE=$(echo "${TEXT#*:}" | tr -cd 'a-zA-Z0-9_.-')
                     CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
                     
-                    TREND_DATA=$(db_exec "SELECT datetime(check_time, 'localtime'), scam_score, nf_status FROM ip_trend_log WHERE node_name='$TARGET_NODE' ORDER BY check_time DESC LIMIT 10;")
+                    TREND_DATA=$(db_exec "SELECT datetime(check_time, 'localtime'), scam_score, goog_status, nf_status, gpt_status FROM ip_trend_log WHERE node_name='$TARGET_NODE' ORDER BY check_time DESC LIMIT 15;")
                     
                     if [ -z "$TREND_DATA" ]; then
                         TEXT_RES="⚠️ 节点 \`$TARGET_NODE\` 暂无历史体检档案。请先执行 [🔍 投放深海声呐] 进行探测。"
@@ -786,22 +796,28 @@ while true; do
                         TARGET_ALIAS=$(db_exec "SELECT IFNULL(node_alias, node_name) FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE' LIMIT 1;")
                         [ -z "$TARGET_ALIAS" ] && TARGET_ALIAS="$TARGET_NODE"
 
-                        TEXT_RES="📈 *[${TARGET_ALIAS}] IP 污染趋势图谱*\n\n"
-                        TEXT_RES+="时间 (本地) | 风险分 | NF解锁\n"
-                        TEXT_RES+="------------------------------------\n"
+                        TEXT_RES="📈 *[${TARGET_ALIAS}] 历史态势感知 (近15次)*\n\n"
+                        TEXT_RES+="时间(本地)  | 风险 | 谷歌 | NF | GPT\n"
+                        TEXT_RES+="-----------------------------------------\n"
                         
-                        while IFS='|' read -r c_time score nf; do
-                            # 清洗数据防空
+                        while IFS='|' read -r c_time score goog nf gpt; do
                             [ -z "$score" ] && score="0"
-                            [ -z "$nf" ] && nf="Unknown"
+                            [ -z "$goog" ] && goog="未知"
+                            [ -z "$nf" ] && nf="未知"
+                            [ -z "$gpt" ] && gpt="未知"
+                            
+                            # 时间做极简切割 (截取 04-24 20:52) 节省横向空间
+                            short_time=$(echo "$c_time" | cut -c 6-16)
                             
                             if [ "$score" -le 20 ]; then SCORE_EMJ="🟢"
                             elif [ "$score" -le 60 ]; then SCORE_EMJ="🟡"
                             else SCORE_EMJ="🔴"
                             fi
-                            TEXT_RES+="\`${c_time}\` | ${SCORE_EMJ} \`${score}\` | \`${nf}\`\n"
+                            
+                            # 拼接紧凑排版
+                            TEXT_RES+="\`${short_time}\` | ${SCORE_EMJ}\`${score}\` | \`${goog}\` | \`${nf}\` | \`${gpt}\`\n"
                         done <<< "$TREND_DATA"
-                        TEXT_RES+="\n_💡 提示：高危风险分 (🔴 >60) 极易触发 Google 验证码及 Cloudflare 5秒盾拦截。_"
+                        TEXT_RES+="\n_💡 提示：🔴风险分 >60 极易触发网页验证码拦截；谷歌显示 CN 即为高危送中。_"
                     fi
                     
                     if [ -n "$MSG_ID" ]; then

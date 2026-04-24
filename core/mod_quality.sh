@@ -176,9 +176,14 @@ _👉 [🔍 详细信用图谱直达 (Scamalytics)](https://scamalytics.com/ip/$
 SAFE_SCAM_SCORE=$(echo "$SCAM_SCORE" | tr -cd '0-9')
 [ -z "$SAFE_SCAM_SCORE" ] && SAFE_SCAM_SCORE="0"
 
+# [v4.0.2 扩容] 提取 Google(基于YouTube) 和 ChatGPT 的原生状态，供中枢态势感知使用
+RAW_GOOG_STAT="${RAW_YT_REG:-$RAW_YT_STAT}"
+[ -z "$RAW_GOOG_STAT" ] && RAW_GOOG_STAT="未知"
+RAW_GPT_STAT=$(echo "$JSON_DATA" | jq -r '.Media.ChatGPT.Status // "未知"' 2>/dev/null)
+
 REPORT="$REPORT
 
-\`[SYSTEM_REPORT]|QUALITY|${NODE_NAME}|${SAFE_SCAM_SCORE}|${RAW_NF_STAT}\`"
+\`[SYSTEM_REPORT]|QUALITY|${NODE_NAME}|${SAFE_SCAM_SCORE}|${RAW_GOOG_STAT}|${RAW_NF_STAT}|${RAW_GPT_STAT}\`"
 
 # 8. 直送指挥部
 curl -s -X POST "${TG_API_URL}" \
