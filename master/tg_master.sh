@@ -269,7 +269,7 @@ while true; do
                         send_msg "$CHAT_ID" "📢 **司令部指令下达：正在唤醒全舰队执行 OTA 升级...**%0A*(节点升级成功后会主动发回新的入库确认，请注意查收)*"
                         echo "$NODE_DATA" | while IFS='|' read -r NNAME AIP APORT; do
                             TARGET_URL=$(generate_signed_url "$AIP" "$APORT" "/trigger_ota")
-                            { curl -k -s -m 5 "$TARGET_URL" || curl -s -m 5 "${TARGET_URL/https:\/\//http:\/\/}"; } > /dev/null &
+                            curl -k -s -m 5 "$TARGET_URL" > /dev/null &
                             sleep 0.3  # 严格流量削峰
                         done
                     fi
@@ -330,7 +330,7 @@ while true; do
                         send_msg "$CHAT_ID" "📢 **司令部指令下达：正在召唤所有哨兵回传简报...**%0A*(为防止触发 TG 官方限流，简报将排队依次送达，请耐心等待)*"
                         echo "$NODE_DATA" | while IFS='|' read -r NNAME AIP APORT; do
                             TARGET_URL=$(generate_signed_url "$AIP" "$APORT" "/trigger_report")
-                            { curl -k -s -m 5 "$TARGET_URL" || curl -s -m 5 "${TARGET_URL/https:\/\//http:\/\/}"; } > /dev/null &
+                            curl -k -s -m 5 "$TARGET_URL" > /dev/null &
                             # [致命修复] 强行休眠 2 秒！错开 TG 官方 1条/秒 的发信红线
                             sleep 2  
                         done
@@ -549,11 +549,6 @@ while true; do
                         TARGET_URL="${TARGET_URL}&mod=${MOD_NAME}&state=${TARGET_STATE}"
                         
                         RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
-                        # [向下兼容补丁] 若 HTTPS 拒绝或超时，回退 HTTP 试探老节点
-                        if [ "$RESPONSE" == "FAILED" ] || [ -z "$RESPONSE" ]; then
-                            TARGET_URL_HTTP="${TARGET_URL/https:\/\//http:\/\/}"
-                            RESPONSE=$(curl -s -m 5 "$TARGET_URL_HTTP" || echo "FAILED")
-                        fi
                         
                         if [[ "$RESPONSE" == *"Action Accepted"* ]]; then
                             # 下发成功，更新 DB，原位重绘
@@ -593,7 +588,7 @@ while true; do
                             TEXT_MSG="⚙️ **目标锁定**: \`$TARGET_ALIAS\`\n(底层标识: \`$TARGET_NODE\`)\n🌐 IP 坐标: \`$A_IP\`\n🕒 最后通讯: \`$LAST_SEEN\`\n\n✅ **执行成功**: 模块 [$MOD_NAME] 状态已切换为 $TARGET_STATE！"
                             edit_ui "$CHAT_ID" "$MSG_ID" "$TEXT_MSG" "$BTNS"
                         else
-                            send_msg "$CHAT_ID" "❌ 指令下发失败，节点可能离线或未更新至 v3.5.3。"
+                            send_msg "$CHAT_ID" "❌ 指令下发失败，安全策略禁止降级重试。"
                         fi
                     fi
                     ;;
@@ -656,14 +651,9 @@ while true; do
                         TARGET_URL="${TARGET_URL}&b64=${ALIAS_B64}"
                         
                         RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
-                        # [向下兼容补丁] 若 HTTPS 拒绝或超时，回退 HTTP 试探老节点
-                        if [ "$RESPONSE" == "FAILED" ] || [ -z "$RESPONSE" ]; then
-                            TARGET_URL_HTTP="${TARGET_URL/https:\/\//http:\/\/}"
-                            RESPONSE=$(curl -s -m 5 "$TARGET_URL_HTTP" || echo "FAILED")
-                        fi
                         
                         if [ "$RESPONSE" == "FAILED" ]; then
-                            send_msg "$CHAT_ID" "❌ 指令下发超时！请检查节点连通性。"
+                            send_msg "$CHAT_ID" "❌ 指令下发超时！为防范劫持风险，已终止请求。"
                         elif [[ "$RESPONSE" == *"Action Accepted"* ]]; then
                             # [v3.5.2 极致丝滑] 确认 Agent 修改成功后，Master 立即自动同步本地 SQLite 数据库！
                             db_exec "UPDATE nodes SET node_alias='$NEW_ALIAS' WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE';"
@@ -701,14 +691,9 @@ while true; do
                         
                         TARGET_URL=$(generate_signed_url "$AGENT_IP" "$AGENT_PORT" "/trigger_ota")
                         RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
-                        # [向下兼容补丁] 若 HTTPS 拒绝或超时，回退 HTTP 试探老节点
-                        if [ "$RESPONSE" == "FAILED" ] || [ -z "$RESPONSE" ]; then
-                            TARGET_URL_HTTP="${TARGET_URL/https:\/\//http:\/\/}"
-                            RESPONSE=$(curl -s -m 5 "$TARGET_URL_HTTP" || echo "FAILED")
-                        fi
                         
                         if [ "$RESPONSE" == "FAILED" ]; then
-                            TEXT_RES="❌ OTA 指令下发超时！请检查节点公网连通性。"
+                            TEXT_RES="❌ OTA 指令下发超时或被拦截，安全策略禁止降级重试！"
                         elif [[ "$RESPONSE" == *"403"* ]]; then
                             TEXT_RES="⚠️ **节点拒绝执行**：该节点本地未开启 OTA 权限或运行在官方网关下！"
                         else
@@ -747,15 +732,10 @@ while true; do
                         # 🛡️ [v3.0.4] 动态签名生成与触发 (防重放与防篡改)
                         TARGET_URL=$(generate_signed_url "$AGENT_IP" "$AGENT_PORT" "/trigger_${ACTION_TYPE}")
                         RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
-                        # [向下兼容补丁] 若 HTTPS 拒绝或超时，回退 HTTP 试探老节点
-                        if [ "$RESPONSE" == "FAILED" ] || [ -z "$RESPONSE" ]; then
-                            TARGET_URL_HTTP="${TARGET_URL/https:\/\//http:\/\/}"
-                            RESPONSE=$(curl -s -m 5 "$TARGET_URL_HTTP" || echo "FAILED")
-                        fi
                         
                         # 结果判定
                         if [ "$RESPONSE" == "FAILED" ]; then
-                            TEXT_RES="❌ 指令下发超时或失败！请检查节点公网 IP 或防火墙端口 ($AGENT_PORT) 是否放行。"
+                            TEXT_RES="❌ 指令下发超时或失败！为保护链路安全，已终止通信 (严禁降级为 HTTP)。"
                         elif [[ "$RESPONSE" == *"403"* ]]; then
                             TEXT_RES="⚠️ **拒绝执行**：该节点未在本地开启此模块，请检查安装时的配置！"
                         else
