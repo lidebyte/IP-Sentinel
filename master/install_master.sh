@@ -129,9 +129,9 @@ echo -e "\033[32m✅ 旧进程已肃清！\033[0m"
 # =======================================================================
 
 # 1. 依赖检查与智能安装 (v3.6.0 兼容性与优雅性升级)
-echo -e "\n[1/4] 正在探测核心依赖 (curl, jq, sqlite3, crontab, pgrep)..."
+echo -e "\n[1/4] 正在探测核心依赖 (curl, jq, sqlite3, crontab, pgrep, openssl)..."
 
-REQUIRED_CMDS=("curl" "jq" "sqlite3" "crontab" "pgrep")
+REQUIRED_CMDS=("curl" "jq" "sqlite3" "crontab" "pgrep" "openssl")
 MISSING_CMDS=()
 
 # 基础探测：预检查缺失的命令
@@ -148,7 +148,7 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
     if command -v apt-get >/dev/null 2>&1; then
         apt-get update -y >/dev/null 2>&1
         # [v3.6.3 抽脂级优化] 注入 --no-install-recommends 拒绝捆绑销售
-        apt-get install -y --no-install-recommends curl jq sqlite3 cron procps >/dev/null 2>&1
+        apt-get install -y --no-install-recommends curl jq sqlite3 cron procps openssl >/dev/null 2>&1
         systemctl enable cron >/dev/null 2>&1 && systemctl start cron >/dev/null 2>&1
     elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then
         PKG_MGR="yum"
@@ -158,7 +158,7 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
             # [v3.6.3 抽脂级优化] 强行关闭 DNF 的弱依赖拉取
             OPT_ARGS="--setopt=install_weak_deps=False"
         fi
-        $PKG_MGR install -y $OPT_ARGS curl jq sqlite cronie procps-ng >/dev/null 2>&1
+        $PKG_MGR install -y $OPT_ARGS curl jq sqlite cronie procps-ng openssl >/dev/null 2>&1
         systemctl enable crond >/dev/null 2>&1 && systemctl start crond >/dev/null 2>&1
     elif command -v apk >/dev/null 2>&1; then
         echo "Alpine 探测到系统类型为 Alpine Linux，正在执行轻量级安装..."
@@ -168,15 +168,16 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
         rc-update add crond default >/dev/null 2>&1
         service crond start >/dev/null 2>&1
     elif command -v pacman >/dev/null 2>&1; then
-        pacman -Sy --noconfirm curl jq sqlite cronie procps-ng >/dev/null 2>&1
+        pacman -Sy --noconfirm curl jq sqlite cronie procps-ng openssl >/dev/null 2>&1
         mkdir -p /root/.cache/crontab 2>/dev/null
         systemctl enable cronie >/dev/null 2>&1 && systemctl start cronie >/dev/null 2>&1
     else
         echo -e "\033[31m❌ 自动安装失败：系统未知的包管理器。\033[0m"
         echo -e "\033[33m⚠️ 请手动执行以下安装命令后重新运行本脚本：\033[0m"
-        echo -e "  Debian/Ubuntu: \033[36mapt-get update && apt-get install -y --no-install-recommends curl jq sqlite3 cron procps\033[0m"
-        echo -e "  CentOS/RHEL:   \033[36myum install -y curl jq sqlite cronie procps-ng\033[0m"
+        echo -e "  Debian/Ubuntu: \033[36mapt-get update && apt-get install -y --no-install-recommends curl jq sqlite3 cron procps openssl\033[0m"
+        echo -e "  CentOS/RHEL:   \033[36myum install -y curl jq sqlite cronie procps-ng openssl\033[0m"
         echo -e "  Alpine Linux:  \033[36mapk add --no-cache curl jq sqlite cronie procps bash openssl\033[0m"
+        echo -e "  Arch Linux:    \033[36mpacman -Sy curl jq sqlite cronie procps-ng openssl\033[0m"
         exit 1
     fi
     
