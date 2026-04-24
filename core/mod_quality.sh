@@ -5,8 +5,15 @@
 
 source /opt/ip_sentinel/config.conf
 
-TARGET_IP=$(echo "${BIND_IP:-$PUBLIC_IP}" | tr -d '[]')
 IP_PROTO="${IP_PREF:-4}"
+
+# [核心修复] 动态装配参数阵列：默认注入 -y(跳过确认), -j(输出JSON), -f(输出完整明文IP)
+PROBE_ARGS=("-y" "-j" "-f" "-${IP_PROTO}")
+
+# 仅当 BIND_IP 真实存在时（即非 NAT 的纯物理直连机），才向官方探针下发强制绑卡指令
+if [ -n "$BIND_IP" ]; then
+    PROBE_ARGS+=("-i" "$(echo "$BIND_IP" | tr -d '[]')")
+fi
 
 # 1. 静默拉取原始数据 (消除短链接 RCE 劫持风险，收编为本地固化执行)
 PROBE_SCRIPT="/opt/ip_sentinel/core/ip_probe.sh"
@@ -16,8 +23,8 @@ if [ ! -x "$PROBE_SCRIPT" ]; then
     chmod +x "$PROBE_SCRIPT" 2>/dev/null
 fi
 
-# 采用本地执行，彻底封死运行时的外部投毒通道
-RAW_OUTPUT=$(timeout 180 bash "$PROBE_SCRIPT" -y -j -${IP_PROTO} -i "${TARGET_IP}" 2>/dev/null)
+# 采用本地执行，将动态参数阵列展开，彻底封死外部投毒与 NAT 死锁陷阱
+RAW_OUTPUT=$(timeout 180 bash "$PROBE_SCRIPT" "${PROBE_ARGS[@]}" 2>/dev/null)
 
 # 2. 极致截取 JSON (无视开头的赞助商广告与不可见字符，精准提取)
 JSON_DATA="{${RAW_OUTPUT#*\{}"
@@ -127,7 +134,7 @@ REPORT="🎯 *IP-Sentinel 深海声呐报告*
 *🛡️ 欺诈雷达 (0为最优)*
 • **Scamalytics:** \`${SCAM_SCORE}/100\`
 • **AbuseIPDB:** \`${ABUSE_SCORE}/100\`
-• **IPQuality:** \`${IPQS_SCORE}/100\`
+• **IPQS:** \`${IPQS_SCORE}/100\`
 • **IP2Location:** \`${IP2L_SCORE}/100\`
 • **IPAPI 风险率:** \`${FRAUD_RISK}\`
 
