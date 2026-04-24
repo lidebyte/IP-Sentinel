@@ -33,8 +33,18 @@ log() {
     
     # 保证日志目录存在
     mkdir -p "${INSTALL_DIR}/logs"
+    
     # 日志格式注入 [版本号] 追踪标识
-    printf "[$(date '+%Y-%m-%d %H:%M:%S')] [v%-5s] [%-5s] [%-7s] [%s] %s\n" "$local_ver" "$level" "$module" "$REGION_CODE" "$msg" >> "$LOG_FILE"
+    local core_msg=$(printf "[v%-5s] [%-5s] [%-7s] [%s] %s" "$local_ver" "$level" "$module" "$REGION_CODE" "$msg")
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $core_msg" >> "$LOG_FILE"
+
+    # 强制推送到 Systemd Journal (如果系统支持)
+    if command -v logger >/dev/null 2>&1; then
+        logger -t ip-sentinel "$core_msg"
+    else
+        # 降级输出到 stdout，让 Systemd 捕获
+        echo "$core_msg"
+    fi
 }
 export -f log
 export CONFIG_FILE INSTALL_DIR
