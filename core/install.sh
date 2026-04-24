@@ -22,9 +22,10 @@ INSTALL_DIR="/opt/ip_sentinel"
 CONFIG_FILE="${INSTALL_DIR}/config.conf"
 
 # [核心: 动态提取 Agent 专属版本锚点 (KV 解析法)]
-TARGET_VERSION=$(curl -s -m 3 "${REPO_RAW_URL}/version.txt" | grep "^AGENT_VERSION=" | cut -d'=' -f2 | tr -d '[:space:]')
+# [修复] 增加 -L 与双栈容灾 (-4)，解决纯 V6 或 V6 优先机器连接 GitHub Raw 易超时的问题
+TARGET_VERSION=$( (curl -sL -m 5 "${REPO_RAW_URL}/version.txt" || curl -4 -sL -m 5 "${REPO_RAW_URL}/version.txt") 2>/dev/null | grep "^AGENT_VERSION=" | cut -d'=' -f2 | tr -d '[:space:]')
 # 🛡️ 兜底防线：如果网络波动拉取失败，启用内置的安全兜底版本
-TARGET_VERSION=${TARGET_VERSION:-"3.5.1"}
+TARGET_VERSION=${TARGET_VERSION:-"4.0.0"}
 
 # 轻量级版本号比对函数 (例如: version_lt "3.3.1" "3.4.0" 返回 true)
 version_lt() {
