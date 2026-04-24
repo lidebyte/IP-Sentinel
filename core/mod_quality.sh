@@ -51,6 +51,13 @@ IPQS_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.IPQS // "0"' 2>/dev/null)
 IP2L_SCORE=$(echo "$JSON_DATA" | jq -r '.Score.IP2LOCATION // "0"' 2>/dev/null)
 FRAUD_RISK=$(echo "$JSON_DATA" | jq -r '.Score.ipapi // "0%"' 2>/dev/null)
 
+# [修复] 清洗 API 阻断返回的 null 值，保障面板整洁
+[ "$SCAM_SCORE" == "null" ] || [ -z "$SCAM_SCORE" ] && SCAM_SCORE="N/A"
+[ "$ABUSE_SCORE" == "null" ] || [ -z "$ABUSE_SCORE" ] && ABUSE_SCORE="N/A"
+[ "$IPQS_SCORE" == "null" ] || [ -z "$IPQS_SCORE" ] && IPQS_SCORE="N/A"
+[ "$IP2L_SCORE" == "null" ] || [ -z "$IP2L_SCORE" ] && IP2L_SCORE="N/A"
+[ "$FRAUD_RISK" == "null" ] || [ -z "$FRAUD_RISK" ] && FRAUD_RISK="N/A"
+
 # 代理/VPN 特征探针 (只要有一家认为是代理，就亮黄灯)
 IS_PROXY="🟢 干净"
 if echo "$JSON_DATA" | jq -e '.Factor.Proxy | to_entries | any(.value == true)' >/dev/null 2>&1 || \
@@ -65,11 +72,15 @@ parse_media() {
     local type=$(echo "$JSON_DATA" | jq -r ".Media.$1.Type // \"\"" 2>/dev/null)
     
     if [[ "$status" == *"解锁"* ]]; then
-        echo "🟢 $reg ($type)"
-    elif [[ "$status" == *"屏蔽"* ]] || [[ "$status" == *"失败"* ]]; then
-        echo "🔴 屏蔽"
+        echo "🟢 ${reg} (${type})"
+    elif [[ "$status" == *"仅"* ]] || [[ "$status" == *"机房"* ]] || [[ "$status" == *"待支持"* ]]; then
+        # 捕捉 Netflix "仅自制"、ChatGPT "仅网页"、TikTok "机房" 等半残状态
+        echo "🟡 ${status} ${reg}"
+    elif [[ "$status" == *"屏蔽"* ]] || [[ "$status" == *"失败"* ]] || [[ "$status" == *"中国"* ]] || [[ "$status" == *"禁"* ]]; then
+        # 捕捉 "屏蔽"、"失败"、"禁会员"、"中国"(送中)
+        echo "🔴 ${status}"
     else
-        echo "⚪ $status"
+        echo "⚪ ${status}"
     fi
 }
 
@@ -93,11 +104,16 @@ DNS_MARK=$(echo "$JSON_DATA" | jq -r '.Mail.DNSBlacklist.Marked // "0"' 2>/dev/n
 
 # 6. “送中” 逻辑判定
 WARNING_MSG=""
-if [[ "$RAW_YT_REG" == *"[CN]"* ]] || [[ "$RAW_YT_STAT" == *"China"* ]]; then
+# [修复] 官方 JSON 已经去除了方括号，直接匹配 CN 或者状态包含中国
+if [[ "$RAW_YT_REG" == "CN" ]] || [[ "$RAW_YT_STAT" == *"中国"* ]]; then
     WARNING_MSG="%0A🚨 **[高危] 该节点已被 Google 判定为中国大陆 (送中)！**%0A"
 fi
 
 # 7. 组装情报级 Markdown 战报
+# 提取本地运行态版本与生成时间戳
+LOCAL_VER="${AGENT_VERSION:-未知}"
+CURRENT_TIME=$(date "+%Y-%m-%d %H:%M:%S")
+
 REPORT="🎯 *IP-Sentinel 深海声呐报告*
 📍 节点：\`${NODE_ALIAS}\`
 🌐 地址：\`${IP_ADDR}\`${WARNING_MSG}
@@ -129,7 +145,15 @@ REPORT="🎯 *IP-Sentinel 深海声呐报告*
 
 _👉 [🔍 详细信用图谱直达 (Scamalytics)](https://scamalytics.com/ip/${TARGET_IP})_
 
-\`[SYSTEM_REPORT]|QUALITY|${NODE_NAME}|${SCAM_SCORE}|${RAW_NF_STAT}\`"
+⏱️ \`${CURRENT_TIME}\` | ⚙️ \`v${LOCAL_VER}\`"
+
+# [修复] 剥离显示层的 N/A，确保传给 Master 趋势数据库的是纯数字 (无效则记为0)
+SAFE_SCAM_SCORE=$(echo "$SCAM_SCORE" | tr -cd '0-9')
+[ -z "$SAFE_SCAM_SCORE" ] && SAFE_SCAM_SCORE="0"
+
+REPORT="$REPORT
+
+\`[SYSTEM_REPORT]|QUALITY|${NODE_NAME}|${SAFE_SCAM_SCORE}|${RAW_NF_STAT}\`"
 
 # 8. 直送指挥部
 curl -s -X POST "${TG_API_URL}" \
