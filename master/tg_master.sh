@@ -269,7 +269,8 @@ while true; do
                         send_msg "$CHAT_ID" "📢 **司令部指令下达：正在唤醒全舰队执行 OTA 升级...**%0A*(节点升级成功后会主动发回新的入库确认，请注意查收)*"
                         echo "$NODE_DATA" | while IFS='|' read -r NNAME AIP APORT; do
                             TARGET_URL=$(generate_signed_url "$AIP" "$APORT" "/trigger_ota")
-                            curl -k -s -m 5 "$TARGET_URL" > /dev/null &
+                            # [灾难救援通道] 仅针对 OTA 允许一次明文回退，抢救缺失证书的老节点
+                            { curl -k -s -m 5 "$TARGET_URL" || curl -s -m 5 "${TARGET_URL/https:\/\//http:\/\/}"; } > /dev/null &
                             sleep 0.3  # 严格流量削峰
                         done
                     fi
@@ -692,12 +693,20 @@ while true; do
                         TARGET_URL=$(generate_signed_url "$AGENT_IP" "$AGENT_PORT" "/trigger_ota")
                         RESPONSE=$(curl -k -s -m 5 "$TARGET_URL" || echo "FAILED")
                         
+                        # [灾难救援通道] 仅针对 OTA 开放一次性明文降级，用于抢救缺失 openssl 证书的老节点
                         if [ "$RESPONSE" == "FAILED" ]; then
-                            TEXT_RES="❌ OTA 指令下发超时或被拦截，安全策略禁止降级重试！"
+                            TARGET_URL_HTTP="${TARGET_URL/https:\/\//http:\/\/}"
+                            RESPONSE=$(curl -s -m 5 "$TARGET_URL_HTTP" || echo "FAILED")
+                            
+                            if [[ "$RESPONSE" == *"Action Accepted"* ]]; then
+                                TEXT_RES="⚠️ **明文救援成功**：该节点因缺失证书处于 HTTP 裸奔状态！已强行下发 OTA 抢救指令，请等待其重构 TLS 装甲。"
+                            else
+                                TEXT_RES="❌ OTA 指令下发彻底失败！节点已失联或网络阻断。"
+                            fi
                         elif [[ "$RESPONSE" == *"403"* ]]; then
                             TEXT_RES="⚠️ **节点拒绝执行**：该节点本地未开启 OTA 权限或运行在官方网关下！"
                         else
-                            TEXT_RES="✅ OTA 触发成功！节点正在后台执行拉取重构，请等待其发送更新完成的回执消息。"
+                            TEXT_RES="✅ OTA (TLS加密) 触发成功！节点正在后台执行拉取重构..."
                         fi
                         
                         if [ -n "$MSG_ID" ]; then

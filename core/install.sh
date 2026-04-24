@@ -36,7 +36,7 @@ version_lt() {
 echo -e "\n[1/7] 正在探测并安装基础环境依赖 (curl, jq, cron, procps, python3)..."
 
 # 定义必须检测的核心命令
-REQUIRED_CMDS=("curl" "jq" "crontab" "pgrep" "python3")
+REQUIRED_CMDS=("curl" "jq" "crontab" "pgrep" "python3" "openssl")
 MISSING_CMDS=()
 
 # 基础探测：预检查缺失的命令
@@ -55,7 +55,7 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
         # Debian / Ubuntu 系列
         apt-get update -y >/dev/null 2>&1
         # [v3.6.3 抽脂级优化] 注入 --no-install-recommends 拒绝捆绑销售，大幅节省磁盘与内存
-        apt-get install -y --no-install-recommends curl jq cron procps python3 >/dev/null 2>&1
+        apt-get install -y --no-install-recommends curl jq cron procps python3 openssl >/dev/null 2>&1
         systemctl enable cron >/dev/null 2>&1 && systemctl start cron >/dev/null 2>&1
         
     elif command -v yum >/dev/null 2>&1 || command -v dnf >/dev/null 2>&1; then
@@ -67,20 +67,20 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
             # [v3.6.3 抽脂级优化] 强行关闭 DNF 的弱依赖拉取
             OPT_ARGS="--setopt=install_weak_deps=False"
         fi
-        $PKG_MGR install -y $OPT_ARGS curl jq cronie procps-ng python3 >/dev/null 2>&1
+        $PKG_MGR install -y $OPT_ARGS curl jq cronie procps-ng python3 openssl >/dev/null 2>&1
         systemctl enable crond >/dev/null 2>&1 && systemctl start crond >/dev/null 2>&1
         
     elif command -v apk >/dev/null 2>&1; then
         # Alpine 本身就是极致精简，无需特殊参数
         echo "Alpine 探测到系统类型为 Alpine Linux，正在执行轻量级安装..."
-        apk add --no-cache curl jq dcron procps python3 bash >/dev/null 2>&1
+        apk add --no-cache curl jq dcron procps python3 bash openssl >/dev/null 2>&1
         mkdir -p /var/spool/cron/crontabs
         rc-update add crond default >/dev/null 2>&1
         service crond start >/dev/null 2>&1
         
     elif command -v pacman >/dev/null 2>&1; then
         # Arch Linux 系列
-        pacman -Sy --noconfirm curl jq cronie procps-ng python >/dev/null 2>&1
+        pacman -Sy --noconfirm curl jq cronie procps-ng python openssl >/dev/null 2>&1
         mkdir -p /root/.cache/crontab 2>/dev/null
         systemctl enable cronie >/dev/null 2>&1 && systemctl start cronie >/dev/null 2>&1
         
@@ -88,10 +88,10 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
         # 无法识别的系统：退出并给出清晰的引导信息 (同步更新防捆绑参数)
         echo -e "\033[31m❌ 自动安装失败：系统未知的包管理器。\033[0m"
         echo -e "\033[33m⚠️ 请根据您的操作系统，手动执行以下安装命令后重新运行本脚本：\033[0m"
-        echo -e "  Debian/Ubuntu: \033[36mapt-get update && apt-get install -y --no-install-recommends curl jq cron procps python3\033[0m"
-        echo -e "  CentOS/RHEL:   \033[36myum install -y curl jq cronie procps-ng python3\033[0m"
-        echo -e "  Alpine Linux:  \033[36mapk add --no-cache curl jq dcron procps python3 bash\033[0m"
-        echo -e "  Arch Linux:    \033[36mpacman -Sy curl jq cronie procps-ng python\033[0m"
+        echo -e "  Debian/Ubuntu: \033[36mapt-get update && apt-get install -y --no-install-recommends curl jq cron procps python3 openssl\033[0m"
+        echo -e "  CentOS/RHEL:   \033[36myum install -y curl jq cronie procps-ng python3 openssl\033[0m"
+        echo -e "  Alpine Linux:  \033[36mapk add --no-cache curl jq dcron procps python3 bash openssl\033[0m"
+        echo -e "  Arch Linux:    \033[36mpacman -Sy curl jq cronie procps-ng python openssl\033[0m"
         exit 1
     fi
     
