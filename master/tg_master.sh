@@ -370,7 +370,7 @@ while true; do
                 "/quality"|"/quality@"*)
                     TARGET_NODE=$(echo "$TEXT" | awk '{print $2}')
                     if [ -z "$TARGET_NODE" ]; then
-                        send_msg "$CHAT_ID" "⚠️ 请指定目标节点。例如: \`/quality HK-1\`\n或通过雷达面板进行选择操作。"
+                        send_msg "$CHAT_ID" "⚠️ 请指定目标节点。例如: \`/quality HK-1\`%0A或通过雷达面板进行选择操作。"
                     else
                         TARGET_NODE=$(echo "$TARGET_NODE" | tr -cd 'a-zA-Z0-9_.-')
                         CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
@@ -408,12 +408,12 @@ while true; do
                 "/trend"|"/trend@"*)
                     TARGET_NODE=$(echo "$TEXT" | awk '{print $2}')
                     if [ -z "$TARGET_NODE" ]; then
-                        send_msg "$CHAT_ID" "⚠️ 请指定目标节点。例如: \`/trend HK-1\`\n或通过雷达面板进行选择操作。"
+                        send_msg "$CHAT_ID" "⚠️ 请指定目标节点。例如: \`/trend HK-1\`%0A或通过雷达面板进行选择操作。"
                     else
                         TARGET_NODE=$(echo "$TARGET_NODE" | tr -cd 'a-zA-Z0-9_.-')
                         CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
                         
-                        TREND_DATA=$(db_exec "SELECT datetime(check_time, 'localtime'), scam_score, nf_status FROM ip_trend_log WHERE node_name='$TARGET_NODE' ORDER BY check_time DESC LIMIT 10;")
+                        TREND_DATA=$(db_exec "SELECT datetime(check_time, 'localtime'), scam_score, goog_status, nf_status, gpt_status FROM ip_trend_log WHERE node_name='$TARGET_NODE' ORDER BY check_time DESC LIMIT 15;")
                         
                         if [ -z "$TREND_DATA" ]; then
                             send_msg "$CHAT_ID" "⚠️ 节点 \`$TARGET_NODE\` 暂无历史体检档案。请先执行 /quality 投放声呐进行探测。"
@@ -421,20 +421,26 @@ while true; do
                             TARGET_ALIAS=$(db_exec "SELECT IFNULL(node_alias, node_name) FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE' LIMIT 1;")
                             [ -z "$TARGET_ALIAS" ] && TARGET_ALIAS="$TARGET_NODE"
 
-                            TEXT_RES="📈 *[${TARGET_ALIAS}] IP 污染趋势图谱*\n\n"
-                            TEXT_RES+="时间 (本地) | 风险分 | NF解锁\n"
-                            TEXT_RES+="------------------------------------\n"
+                            TEXT_RES="📈 *[${TARGET_ALIAS}] 历史态势感知 (近15次)*%0A%0A"
+                            TEXT_RES+="时间(本地)  | 风险 | 谷歌 | NF | GPT%0A"
+                            TEXT_RES+="-----------------------------------------%0A"
                             
-                            while IFS='|' read -r c_time score nf; do
+                            while IFS='|' read -r c_time score goog nf gpt; do
                                 [ -z "$score" ] && score="0"
-                                [ -z "$nf" ] && nf="Unknown"
+                                [ -z "$goog" ] && goog="未知"
+                                [ -z "$nf" ] && nf="未知"
+                                [ -z "$gpt" ] && gpt="未知"
+                                
+                                short_time=$(echo "$c_time" | cut -c 6-16)
+                                
                                 if [ "$score" -le 20 ]; then SCORE_EMJ="🟢"
                                 elif [ "$score" -le 60 ]; then SCORE_EMJ="🟡"
                                 else SCORE_EMJ="🔴"
                                 fi
-                                TEXT_RES+="\`${c_time}\` | ${SCORE_EMJ} \`${score}\` | \`${nf}\`\n"
+                                
+                                TEXT_RES+="\`${short_time}\` | ${SCORE_EMJ}\`${score}\` | \`${goog}\` | \`${nf}\` | \`${gpt}\`%0A"
                             done <<< "$TREND_DATA"
-                            TEXT_RES+="\n_💡 提示：高危风险分 (🔴 >60) 极易触发 Google 验证码及 Cloudflare 5秒盾拦截。_"
+                            TEXT_RES+="%0A_💡 提示：🔴风险分 >60 极易触发网页验证码拦截；谷歌显示 CN 即为高危送中。_"
                             
                             send_msg "$CHAT_ID" "$TEXT_RES"
                         fi
@@ -796,9 +802,9 @@ while true; do
                         TARGET_ALIAS=$(db_exec "SELECT IFNULL(node_alias, node_name) FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE' LIMIT 1;")
                         [ -z "$TARGET_ALIAS" ] && TARGET_ALIAS="$TARGET_NODE"
 
-                        TEXT_RES="📈 *[${TARGET_ALIAS}] 历史态势感知 (近15次)*\n\n"
-                        TEXT_RES+="时间(本地)  | 风险 | 谷歌 | NF | GPT\n"
-                        TEXT_RES+="-----------------------------------------\n"
+                        TEXT_RES="📈 *[${TARGET_ALIAS}] 历史态势感知 (近15次)*%0A%0A"
+                        TEXT_RES+="时间(本地)  | 风险 | 谷歌 | NF | GPT%0A"
+                        TEXT_RES+="-----------------------------------------%0A"
                         
                         while IFS='|' read -r c_time score goog nf gpt; do
                             [ -z "$score" ] && score="0"
@@ -815,9 +821,9 @@ while true; do
                             fi
                             
                             # 拼接紧凑排版
-                            TEXT_RES+="\`${short_time}\` | ${SCORE_EMJ}\`${score}\` | \`${goog}\` | \`${nf}\` | \`${gpt}\`\n"
+                            TEXT_RES+="\`${short_time}\` | ${SCORE_EMJ}\`${score}\` | \`${goog}\` | \`${nf}\` | \`${gpt}\`%0A"
                         done <<< "$TREND_DATA"
-                        TEXT_RES+="\n_💡 提示：🔴风险分 >60 极易触发网页验证码拦截；谷歌显示 CN 即为高危送中。_"
+                        TEXT_RES+="%0A_💡 提示：🔴风险分 >60 极易触发网页验证码拦截；谷歌显示 CN 即为高危送中。_"
                     fi
                     
                     if [ -n "$MSG_ID" ]; then
