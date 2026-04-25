@@ -453,7 +453,9 @@ while true; do
                             done <<< "$TREND_DATA"
                             TEXT_RES+="%0A_💡 提示：🔴风险分 >60 极易触发网页验证码拦截；谷歌显示 CN 即为高危送中。_"
                             
-                            send_msg "$CHAT_ID" "$TEXT_RES"
+                            # [v4.0.3 体验升级] 注入交互式控制台按钮
+                            BTNS="[[{\"text\":\"⚙️ 调出该节点控制台\",\"callback_data\":\"manage:$TARGET_NODE\"}]]"
+                            send_ui "$CHAT_ID" "$TEXT_RES" "$BTNS"
                         fi
                     fi
                     ;;
@@ -825,10 +827,13 @@ while true; do
                         TEXT_RES+="%0A_💡 提示：🔴风险分 >60 极易触发网页验证码拦截；谷歌显示 CN 即为高危送中。_"
                     fi
                     
+                    # [v4.0.3 体验升级] 注入交互式控制台按钮，并调用原生 UI 重绘函数
+                    BTNS="[[{\"text\":\"⚙️ 调出该节点控制台\",\"callback_data\":\"manage:$TARGET_NODE\"}]]"
+                    
                     if [ -n "$MSG_ID" ]; then
-                        edit_msg "$CHAT_ID" "$MSG_ID" "$TEXT_RES"
+                        edit_ui "$CHAT_ID" "$MSG_ID" "$TEXT_RES" "$BTNS"
                     else
-                        send_msg "$CHAT_ID" "$TEXT_RES"
+                        send_ui "$CHAT_ID" "$TEXT_RES" "$BTNS"
                     fi
                     ;;
                     
