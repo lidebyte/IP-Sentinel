@@ -16,8 +16,8 @@ if [[ -n "$BIND_IP" && "$BIND_IP" =~ ^[0-9a-fA-F:\[\]\.]+$ ]]; then
     RAW_BIND_IP=$(echo "$BIND_IP" | tr -d '[]')
     # 严格探测物理网卡/虚拟 IP 存活状态，防止 IP 漂移导致探针彻底报错
     if ip addr show 2>/dev/null | grep -qw "$RAW_BIND_IP"; then
-        # 核心：放弃检测脚本不可靠的传参，准备在底层进行函数级劫持
-        BIND_READY="true"
+        # 恢复使用官方原生参数 -i，不再进行徒劳的底层劫持
+        PROBE_ARGS+=("-i" "$RAW_BIND_IP")
         
         # 智能识别 V4 / V6，强制覆盖系统默认的 IP_PREF
         if [[ "$RAW_BIND_IP" == *":"* ]]; then
@@ -28,7 +28,7 @@ if [[ -n "$BIND_IP" && "$BIND_IP" =~ ^[0-9a-fA-F:\[\]\.]+$ ]]; then
     fi
 fi
 
-# 补齐协议版本参数 (-4 或 -6)，强行锁定测试目标网域
+# 补齐协议版本参数 (-4 或 -6)
 PROBE_ARGS+=("-${DYNAMIC_IP_PREF}")
 
 # 2. 静默拉取原始数据 (消除短链接 RCE 劫持风险，收编为本地固化执行)
@@ -39,26 +39,8 @@ if [ ! -x "$PROBE_SCRIPT" ]; then
     chmod +x "$PROBE_SCRIPT" 2>/dev/null
 fi
 
-# ==========================================
-# 🛑 [终极战术] 源码物理变异 (Source Code Mutation)
-# 无视第三方脚本的 PATH 重置或绝对路径调用，直接对其底层代码进行物理清洗！
-# ==========================================
-if [ "$BIND_READY" == "true" ]; then
-    TMP_PROBE="/tmp/ip_sentinel_probe_$$.sh"
-    cp -f "$PROBE_SCRIPT" "$TMP_PROBE"
-    
-    # [降维打击] 暴力替换代码文本中的网络请求指令，物理焊死出口网卡
-    # 匹配 "curl -" 防止误伤 "command -v curl" 的探针环境检测
-    sed -i "s/curl -/curl --interface ${RAW_BIND_IP} -/g" "$TMP_PROBE"
-    sed -i "s/wget -/wget --bind-address=${RAW_BIND_IP} -/g" "$TMP_PROBE"
-    
-    # 采用被我们物理洗脑后的变异源码执行探测
-    RAW_OUTPUT=$(timeout 180 bash "$TMP_PROBE" "${PROBE_ARGS[@]}" 2>/dev/null)
-    rm -f "$TMP_PROBE"
-else
-    # 正常机器直接执行
-    RAW_OUTPUT=$(timeout 180 bash "$PROBE_SCRIPT" "${PROBE_ARGS[@]}" 2>/dev/null)
-fi
+# 采用本地原生执行，拥抱底层路由的真实结果
+RAW_OUTPUT=$(timeout 180 bash "$PROBE_SCRIPT" "${PROBE_ARGS[@]}" 2>/dev/null)
 
 # 2. 极致截取 JSON (无视开头的赞助商广告与不可见字符，精准提取)
 JSON_DATA="{${RAW_OUTPUT#*\{}"
