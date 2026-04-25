@@ -40,47 +40,39 @@ if [ ! -x "$PROBE_SCRIPT" ]; then
 fi
 
 # ==========================================
-# 🛑 [核心战术] 幽灵网卡劫持 v2 (PATH 物理覆写版)
-# 解决 Alpine/Busybox 下 export 无法穿透 timeout 子进程的痛点
+# 🛑 [核心战术] 幽灵网卡劫持 v3 (Source 包装版)
+# 彻底免疫第三方脚本内部的 PATH 重置与子进程隔离！
 # ==========================================
 if [ "$BIND_READY" == "true" ]; then
-    REAL_CURL=$(command -v curl)
-    REAL_WGET=$(command -v wget)
-    HIJACK_DIR="/tmp/ip_sentinel_hijack_$$"
-    mkdir -p "$HIJACK_DIR"
+    TMP_PROBE="/tmp/ip_sentinel_probe_$$.sh"
+    # 构建高维外壳，注入拦截函数并吸入原版脚本
+    cat > "$TMP_PROBE" << EOF
+#!/bin/bash
+curl() {
+    if [[ "\$*" == *"localhost"* || "\$*" == *"127.0.0.1"* || "\$*" == *"api.ip.sb"* ]]; then
+        command curl "\$@"
+    else
+        command curl --interface "$RAW_BIND_IP" "\$@"
+    fi
+}
+wget() {
+    if [[ "\$*" == *"localhost"* || "\$*" == *"127.0.0.1"* ]]; then
+        command wget "\$@"
+    else
+        command wget --bind-address="$RAW_BIND_IP" "\$@"
+    fi
+}
+# 将第三方检测脚本拉入当前的函数作用域中执行
+source "$PROBE_SCRIPT" "\$@"
+EOF
+    chmod +x "$TMP_PROBE"
     
-    # 伪造 curl 拦截器
-    cat > "$HIJACK_DIR/curl" << EOF
-#!/bin/bash
-if [[ "\$*" == *"localhost"* || "\$*" == *"127.0.0.1"* ]]; then
-    exec $REAL_CURL "\$@"
+    # 采用高维外壳执行，彻底封死出口
+    RAW_OUTPUT=$(timeout 180 bash "$TMP_PROBE" "${PROBE_ARGS[@]}" 2>/dev/null)
+    rm -f "$TMP_PROBE"
 else
-    exec $REAL_CURL --interface "$RAW_BIND_IP" "\$@"
-fi
-EOF
-    chmod +x "$HIJACK_DIR/curl"
-
-    # 伪造 wget 拦截器
-    cat > "$HIJACK_DIR/wget" << EOF
-#!/bin/bash
-if [[ "\$*" == *"localhost"* || "\$*" == *"127.0.0.1"* ]]; then
-    exec $REAL_WGET "\$@"
-else
-    exec $REAL_WGET --bind-address="$RAW_BIND_IP" "\$@"
-fi
-EOF
-    chmod +x "$HIJACK_DIR/wget"
-
-    # 篡改系统环境变量，强行将伪造目录提权到最优先级
-    export PATH="$HIJACK_DIR:$PATH"
-fi
-
-# 采用本地执行，将动态参数阵列展开，彻底封死外部投毒与 NAT 死锁陷阱
-RAW_OUTPUT=$(timeout 180 bash "$PROBE_SCRIPT" "${PROBE_ARGS[@]}" 2>/dev/null)
-
-if [ "$BIND_READY" == "true" ]; then
-    # 事了拂衣去，销毁伪造的命令工厂
-    rm -rf "$HIJACK_DIR"
+    # 正常机器直接执行
+    RAW_OUTPUT=$(timeout 180 bash "$PROBE_SCRIPT" "${PROBE_ARGS[@]}" 2>/dev/null)
 fi
 
 # 2. 极致截取 JSON (无视开头的赞助商广告与不可见字符，精准提取)
