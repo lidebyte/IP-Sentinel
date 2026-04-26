@@ -622,8 +622,19 @@ while true; do
                     TARGET_NODE=$(echo "${TEXT#*:}" | tr -cd 'a-zA-Z0-9_.-')
                     CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
                     
-                    db_exec "DELETE FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE';"
-                    send_msg "$CHAT_ID" "🗑️ 节点 \`$TARGET_NODE\` 的档案已从司令部彻底销毁！"
+                    # 🛡️ [终极防线: 防越权横向打击] 先校验该节点是否真实属于当前操作者！
+                    # 因为趋势库中没有 Chat_ID 标识，不校验直接删会给黑客伪造回调清空他人数据的机会！
+                    VALID_OWNER=$(db_exec "SELECT 1 FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE' LIMIT 1;")
+                    
+                    if [ "$VALID_OWNER" == "1" ]; then
+                        # 验权通过，执行原子化级联销毁：同时抹除主配置与历史污染趋势
+                        db_exec "DELETE FROM nodes WHERE chat_id='$CHAT_ID' AND node_name='$TARGET_NODE';"
+                        db_exec "DELETE FROM ip_trend_log WHERE node_name='$TARGET_NODE';"
+                        send_msg "$CHAT_ID" "🗑️ 节点 \`$TARGET_NODE\` 的档案及历史污染趋势已从司令部彻底销毁！"
+                    else
+                        send_msg "$CHAT_ID" "⛔ **安全拦截**：销毁失败。目标节点不存在或您无权越权操作！"
+                        continue
+                    fi
                     
                     # 剔除后直接返回上级一级雷达菜单
                     REGION_DATA=$(db_exec "SELECT region, COUNT(*) FROM nodes WHERE chat_id='$CHAT_ID' GROUP BY region;")
