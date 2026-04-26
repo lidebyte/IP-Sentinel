@@ -200,13 +200,17 @@ JSON_PAYLOAD=$(jq -n \
   --arg cid "$CHAT_ID" \
   --arg txt "$REPORT" \
   --arg cb "$CB_DATA" \
+  --arg cb_manage "manage:${NODE_NAME}" \
   '{
     chat_id: $cid,
     text: $txt,
     parse_mode: "Markdown",
     disable_web_page_preview: true,
     reply_markup: {
-      inline_keyboard: [[{text: "📥 将本次体检录入趋势库", callback_data: $cb}]]
+      inline_keyboard: [
+        [{text: "📥 将本次体检录入趋势库", callback_data: $cb}],
+        [{text: "⚙️ 调出该节点控制台", callback_data: $cb_manage}]
+      ]
     }
   }')
 
