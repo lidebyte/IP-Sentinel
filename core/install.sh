@@ -784,48 +784,108 @@ EOF
     fi
     else
         echo "💡 未检测到 Systemd，正在配置备用调度器 (兼容 Alpine/OpenRC)..."
-        crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_backup || true
-        echo "*/30 * * * * ${INSTALL_DIR}/core/runner.sh >/dev/null 2>&1" >> /tmp/cron_backup
-        echo "0 3 * * * ${INSTALL_DIR}/core/updater.sh >/dev/null 2>&1" >> /tmp/cron_backup
         
-        if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
-            echo "0 8 * * * ${INSTALL_DIR}/core/tg_report.sh >/dev/null 2>&1" >> /tmp/cron_backup
-            echo "$SAFE_PUBLIC_IP" > "${INSTALL_DIR}/core/.last_ip"
+        # ==========================================
+        # 🛑 智能环境嗅探: 判定是否为受限的 Alpine 容器环境
+        # ==========================================
+        IS_RESTRICTED_ALPINE="false"
+        if [ -f /etc/alpine-release ]; then
+            # 探测虚拟化类型：/proc/vz(OpenVZ), environ包含lxc(LXC), /.dockerenv(Docker)
+            if [ -d /proc/vz ] || grep -qa container=lxc /proc/1/environ 2>/dev/null || [ -f /.dockerenv ]; then
+                IS_RESTRICTED_ALPINE="true"
+            fi
+        fi
+
+        if [ "$IS_RESTRICTED_ALPINE" == "true" ]; then
+            echo -e "⚠️ 探测到受限的 LXC/OpenVZ Alpine 环境，系统自带 Cron 极易假死。"
+            echo -e "🔧 自动降维打击：启用 [自定义高可用死循环调度器] 接管全局任务..."
             
-            # [核心抢修] 智能探测 OpenRC 环境，注入原生 local.d 启动项，彻底抛弃不可靠的 @reboot
+            # 1. 禁用原有的 Cron 大管家 (防止冲突)
+            rc-update del crond default >/dev/null 2>&1 || true
+            rc-service crond stop >/dev/null 2>&1 || true
+            pkill -9 crond >/dev/null 2>&1 || true
+            crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_clean || true
+            [ -f /tmp/cron_clean ] && crontab /tmp/cron_clean >/dev/null 2>&1
+            rm -f /tmp/cron_clean
+
+            # 2. 写入我们的死循环守护进程
+            cat > ${INSTALL_DIR}/core/sentinel_scheduler.sh << 'EOF'
+#!/bin/bash
+while true; do
+    MIN=$(date +%M)
+    HOUR=$(date +%H)
+    if [ "$MIN" == "00" ] || [ "$MIN" == "30" ]; then
+        /bin/bash /opt/ip_sentinel/core/runner.sh >/dev/null 2>&1
+    fi
+    if [ "$HOUR" == "03" ] && [ "$MIN" == "00" ]; then
+        /bin/bash /opt/ip_sentinel/core/updater.sh >/dev/null 2>&1
+    fi
+    if [ "$HOUR" == "08" ] && [ "$MIN" == "00" ]; then
+        /bin/bash /opt/ip_sentinel/core/tg_report.sh >/dev/null 2>&1
+    fi
+    if ! pgrep -f 'webhook.py' >/dev/null; then
+        /bin/bash /opt/ip_sentinel/core/agent_daemon.sh >/dev/null 2>&1 &
+    fi
+    sleep 60
+done
+EOF
+            chmod +x ${INSTALL_DIR}/core/sentinel_scheduler.sh
+
+            # 3. 写入 OpenRC 开机自启
             if command -v rc-update >/dev/null 2>&1 && [ -d "/etc/local.d" ]; then
-                echo "nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" > /etc/local.d/ip_sentinel.start
-                chmod +x /etc/local.d/ip_sentinel.start
+                echo "nohup bash ${INSTALL_DIR}/core/sentinel_scheduler.sh >/dev/null 2>&1 &" > /etc/local.d/ip_sentinel_scheduler.start
+                chmod +x /etc/local.d/ip_sentinel_scheduler.start
                 rc-update add local default >/dev/null 2>&1
             else
-                # 老旧 SysVinit 或极简环境的传统兜底
-                echo "@reboot nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
+                # 连 OpenRC 都没有的极端环境，写入 profile 兜底
+                grep -q "sentinel_scheduler" /etc/profile || echo "nohup bash ${INSTALL_DIR}/core/sentinel_scheduler.sh >/dev/null 2>&1 &" >> /etc/profile
             fi
             
-            # [核心修复] 强化 Cron 看门狗：严谨探测进程，防无限 fork 风暴
-            echo "* * * * * pgrep -f 'webhook.py' >/dev/null || nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
+            # 4. 立即后台启动
+            [ -n "$PUBLIC_IP" ] && echo "$PUBLIC_IP" > "${INSTALL_DIR}/core/.last_ip"
+            nohup bash ${INSTALL_DIR}/core/sentinel_scheduler.sh >/dev/null 2>&1 &
             
-            nohup bash "${INSTALL_DIR}/core/agent_daemon.sh" >/dev/null 2>&1 &
-        fi
-        
-        # 写入标准的 spool 目录
-        [ -f /tmp/cron_backup ] && crontab /tmp/cron_backup 2>/dev/null
-        
-        # [极限修补] 针对 Alpine/Busybox 的路径割裂顽疾，双向强行同步配置
-        if [ -d "/etc/crontabs" ] && [ -f "/var/spool/cron/crontabs/root" ]; then
-            cp -f /var/spool/cron/crontabs/root /etc/crontabs/root 2>/dev/null || true
-            chmod 600 /etc/crontabs/root 2>/dev/null || true
-        fi
-        
-        # 强行唤醒/重启大管家，让它立刻重新读档
-        if command -v rc-service >/dev/null 2>&1; then
-            rc-service crond restart 2>/dev/null || crond -b 2>/dev/null
         else
-            pkill -9 crond 2>/dev/null || true
-            crond -b 2>/dev/null || true
+            # ==========================================
+            # 🟢 走常规调度路线 (正常的 Linux 或 KVM 型 Alpine)
+            # ==========================================
+            crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_backup || true
+            echo "*/30 * * * * ${INSTALL_DIR}/core/runner.sh >/dev/null 2>&1" >> /tmp/cron_backup
+            echo "0 3 * * * ${INSTALL_DIR}/core/updater.sh >/dev/null 2>&1" >> /tmp/cron_backup
+            
+            if [[ -n "$TG_TOKEN" ]] && [[ -n "$CHAT_ID" ]]; then
+                echo "0 8 * * * ${INSTALL_DIR}/core/tg_report.sh >/dev/null 2>&1" >> /tmp/cron_backup
+                echo "$SAFE_PUBLIC_IP" > "${INSTALL_DIR}/core/.last_ip"
+                
+                if command -v rc-update >/dev/null 2>&1 && [ -d "/etc/local.d" ]; then
+                    echo "nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" > /etc/local.d/ip_sentinel.start
+                    chmod +x /etc/local.d/ip_sentinel.start
+                    rc-update add local default >/dev/null 2>&1
+                else
+                    echo "@reboot nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
+                fi
+                
+                echo "* * * * * pgrep -f 'webhook.py' >/dev/null || nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" >> /tmp/cron_backup
+                
+                nohup bash "${INSTALL_DIR}/core/agent_daemon.sh" >/dev/null 2>&1 &
+            fi
+            
+            [ -f /tmp/cron_backup ] && crontab /tmp/cron_backup >/dev/null 2>&1
+            
+            if [ -d "/etc/crontabs" ] && [ -f "/var/spool/cron/crontabs/root" ]; then
+                cp -f /var/spool/cron/crontabs/root /etc/crontabs/root 2>/dev/null || true
+                chmod 600 /etc/crontabs/root 2>/dev/null || true
+            fi
+            
+            if command -v rc-service >/dev/null 2>&1; then
+                rc-service crond restart >/dev/null 2>&1 || crond -b >/dev/null 2>&1
+            else
+                pkill -9 crond 2>/dev/null || true
+                crond -b >/dev/null 2>&1 || true
+            fi
+            
+            rm -f /tmp/cron_backup
         fi
-        
-        rm -f /tmp/cron_backup
     fi
 
 # ================== [v3.4.0 核心: 状态机驱动的热更新路由] ==================

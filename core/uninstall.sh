@@ -58,6 +58,7 @@ pkill -9 -f "updater.sh" >/dev/null 2>&1
 pkill -9 -f "tg_report.sh" >/dev/null 2>&1
 pkill -9 -f "mod_google.sh" >/dev/null 2>&1
 pkill -9 -f "mod_trust.sh" >/dev/null 2>&1
+pkill -9 -f "sentinel_scheduler.sh" >/dev/null 2>&1
 
 # 3. 清除系统定时任务 (Cron)
 echo "[3/4] 正在清理系统定时任务 (Cron)..."
@@ -77,6 +78,12 @@ for CRON_FILE in "/var/spool/cron/crontabs/root" "/etc/crontabs/root"; do
 done
 # 清理 OpenRC 开机启动项
 rm -f /etc/local.d/ip_sentinel.start 2>/dev/null
+rm -f /etc/local.d/ip_sentinel_scheduler.start 2>/dev/null
+
+# 清理极端环境写在 /etc/profile 里的兜底启动项
+if grep -q "sentinel_scheduler.sh" /etc/profile 2>/dev/null; then
+    sed -i '/sentinel_scheduler\.sh/d' /etc/profile 2>/dev/null || true
+fi
 
 rm -f /tmp/cron_clean
 
