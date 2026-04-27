@@ -130,6 +130,11 @@ while true; do
             CHAT_ID=$(echo "$UPDATE" | jq -r '.message.chat.id // .callback_query.message.chat.id')
             TEXT=$(echo "$UPDATE" | jq -r '.message.text // .callback_query.data')
 
+            # ================== [基础消息解析提取提前] ==================
+            # [致命 Bug 修复] 必须在 svq 入库判断前提取这俩变量，否则入库后无法重绘 UI
+            CB_ID=$(echo "$UPDATE" | jq -r '.callback_query.id // empty')
+            MSG_ID=$(echo "$UPDATE" | jq -r '.callback_query.message.message_id // empty')
+
             # ================== [v4.0.2 核心: 态势感知按钮一键入库] ==================
             if [[ "$TEXT" == "svq|"* ]]; then
                 # 格式: svq|NODE_NAME|SCORE|GOOG|NF|GPT
@@ -140,11 +145,27 @@ while true; do
                     # 1. 写入 SQLite
                     db_exec "INSERT INTO ip_trend_log (node_name, scam_score, goog_status, nf_status, gpt_status) VALUES ('$NODE_ID', '$SCORE', '$GOOG_ST', '$NF_ST', '$GPT_ST');"
                     
-                    # 2. 无损修改原消息：移除入库按钮，展示绿勾状态 (不破坏 Markdown 战报原文)
+                    # [体验优化] 弹出顶部 Toast 气泡，提示入库成功
+                    if [ -n "$CB_ID" ]; then
+                        curl -s --connect-timeout 5 -m 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/answerCallbackQuery" \
+                            -d "callback_query_id=${CB_ID}" \
+                            -d "text=✅ 报告已成功录入趋势库！" \
+                            -d "show_alert=false" > /dev/null
+                    fi
+
+                    # 2. 无损修改原消息：移除入库按钮，展示绿勾状态 (防连点机制生效)
                     if [ -n "$MSG_ID" ]; then
                         curl -s --connect-timeout 5 -m 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/editMessageReplyMarkup" \
                             -H "Content-Type: application/json" \
                             -d "{\"chat_id\":\"${CHAT_ID}\",\"message_id\":\"${MSG_ID}\",\"reply_markup\":{\"inline_keyboard\":[[{\"text\":\"✅ 此报告已存档\",\"callback_data\":\"ignore\"}]]}}" > /dev/null
+                    fi
+                else
+                    # [异常兜底] 弹出红色警告弹窗
+                    if [ -n "$CB_ID" ]; then
+                        curl -s --connect-timeout 5 -m 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/answerCallbackQuery" \
+                            -d "callback_query_id=${CB_ID}" \
+                            -d "text=❌ 数据解析失败，入库中止。" \
+                            -d "show_alert=true" > /dev/null
                     fi
                 fi
                 continue
@@ -170,10 +191,7 @@ while true; do
             fi
 
             # ================== [v3.0.1 新增: 消除转圈圈与获取消息ID] ==================
-            CB_ID=$(echo "$UPDATE" | jq -r '.callback_query.id // empty')
-            MSG_ID=$(echo "$UPDATE" | jq -r '.callback_query.message.message_id // empty')
-            
-            # 告诉 TG 官方“指令已收到”，立刻消除按钮上的加载圈圈
+            # 告诉 TG 官方“指令已收到”，立刻消除按钮上的加载圈圈 (对其他常规按钮生效)
             if [ -n "$CB_ID" ]; then
                 curl -s --connect-timeout 5 -m 10 -X POST "https://api.telegram.org/bot${TG_TOKEN}/answerCallbackQuery" -d "callback_query_id=${CB_ID}" > /dev/null
             fi
