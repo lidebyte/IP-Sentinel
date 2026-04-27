@@ -50,7 +50,7 @@ export -f log
 export CONFIG_FILE INSTALL_DIR
 
 # 3. 防僵尸网络特征 (Cron Jitter) - 核心隐蔽逻辑
-# 配合每 30 分钟的调度周期，将随机休眠控制在 0 到 180 秒内，彻底打散全球并发请求
+# 配合每 20 分钟的调度周期，将随机休眠控制在 0 到 180 秒内，彻底打散全球并发请求
 if [ -t 1 ]; then
     log "SYSTEM" "INFO " "💻 检测到人工终端干预，跳过静默休眠，立即执行任务！"
 else

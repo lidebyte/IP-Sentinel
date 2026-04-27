@@ -696,8 +696,8 @@ EOF
 [Unit]
 Description=Timer for IP-Sentinel Runner Service
 [Timer]
-# [修复] 彻底剔除 OnActiveSec=10s，改用严格的日历整点/半点匹配，杜绝 OTA 瞬间的并发走火！
-OnCalendar=*:00/30
+# [频率优化] 改用严格的 20 分钟步进，杜绝 OTA 瞬间的并发走火！
+OnCalendar=*:0/20
 RandomizedDelaySec=180
 Persistent=true
 Unit=ip-sentinel-runner.service
@@ -822,7 +822,8 @@ while true; do
     # 强制获取绝对 UTC 时分，免疫系统错误时区
     MIN=\$(date -u +%M)
     HOUR=\$(date -u +%H)
-    if [ "\$MIN" == "00" ] || [ "\$MIN" == "30" ]; then
+    # [频率优化] 匹配 20 分钟步进 (00, 20, 40)
+    if [ "\$MIN" == "00" ] || [ "\$MIN" == "20" ] || [ "\$MIN" == "40" ]; then
         /bin/bash /opt/ip_sentinel/core/runner.sh >/dev/null 2>&1
     fi
     # [绝对 UTC 锚点] 基于部署时刻的锚点触发热数据更新，天然并发削峰
@@ -860,7 +861,8 @@ EOF
             # 🟢 走常规调度路线 (正常的 Linux 或 KVM 型 Alpine)
             # ==========================================
             crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_backup || true
-            echo "*/30 * * * * ${INSTALL_DIR}/core/runner.sh >/dev/null 2>&1" >> /tmp/cron_backup
+            # [频率优化] 调整为 */20
+            echo "*/20 * * * * ${INSTALL_DIR}/core/runner.sh >/dev/null 2>&1" >> /tmp/cron_backup
             # [绝对 UTC 锚点] 每天精确在部署的 UTC 时刻触发
             echo "${DEPLOY_UTC_MIN} ${DEPLOY_UTC_HOUR} * * * ${INSTALL_DIR}/core/updater.sh >/dev/null 2>&1" >> /tmp/cron_backup
             
@@ -982,7 +984,7 @@ else
     echo "🎉 边缘节点 (Agent) 部署流程彻底完成！"
 fi
 echo "📍 你的本地守护区域已锁定为: $REGION_NAME"
-echo "⚙️ 哨兵现已开启 [每30分钟] 的高频高拟真养护循环。"
+echo "⚙️ 哨兵现已开启 [每20分钟] 的高频高拟真养护循环。"
 if [[ -n "$TG_TOKEN" ]]; then
     echo "📡 Webhook 监听已启动 (端口: $AGENT_PORT) 并向中枢发送了注册请求。"
     
