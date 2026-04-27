@@ -1,0 +1,30 @@
+{
+  "region_name": "USA - Houston",
+  "google_module": {
+    "base_lat": 29.7604,
+    "base_lon": -95.3698,
+    "lang_params": "hl=en-US&gl=US",
+    "valid_url_suffix": "com"
+  },
+  "trust_module": {
+    "white_urls": [
+      "https://www.houstonchronicle.com/",
+      "https://www.khou.com/",
+      "https://www.click2houston.com/",
+      "https://www.ridemetro.org/",
+      "https://www.houstontx.gov/",
+      "https://www.rice.edu/",
+      "https://www.uh.edu/",
+      "https://www.visithoustontexas.com/",
+      "https://www.mdanderson.org/",
+      "https://www.nasa.gov/"
+    ],
+    "static_urls": [
+      "https://www.houstontx.gov/",
+      "https://www.houstonchronicle.com/",
+      "https://www.rice.edu/",
+      "https://www.mdanderson.org/",
+      "https://www.nasa.gov/"
+    ]
+  }
+}
