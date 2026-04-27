@@ -169,18 +169,9 @@ else
 fi
 
 # ================== [v3.1.1/v3.2.2 优化: 安装前环境纯净度清理] ==================
-echo -e "\n⏳ 正在清理旧版守护进程与冗余任务..."
-# [新增] 优雅停止 Systemd 服务，防止代码替换时引发无限复活风暴
-if command -v systemctl >/dev/null 2>&1; then
-    systemctl stop ip-sentinel-runner.timer ip-sentinel-updater.timer ip-sentinel-report.timer ip-sentinel-agent-daemon.service >/dev/null 2>&1 || true
-fi
+echo -e "\n⏳ 正在清理系统定时任务中的旧版条目..."
 
-# 1. 强制超度可能存活的 Webhook 及各类看门狗进程，释放端口
-pkill -9 -f "webhook.py" >/dev/null 2>&1 || true
-pkill -9 -f "agent_daemon.sh" >/dev/null 2>&1 || true
-pkill -9 -f "runner.sh" >/dev/null 2>&1 || true
-
-# 2. 清除系统定时任务 (Cron) 中的旧版条目 (安全容错版)
+# 1. 清除系统定时任务 (Cron) 中的旧版条目 (安全容错版)
 crontab -l 2>/dev/null | grep -v "ip_sentinel" > /tmp/cron_clean || true
 # [追加 >/dev/null 2>&1 堵死 Alpine 的脏话输出]
 [ -f /tmp/cron_clean ] && crontab /tmp/cron_clean >/dev/null 2>&1
@@ -595,7 +586,8 @@ if [ "$UPGRADE_MODE" == "true" ]; then
         BIND_IP="$NEW_BIND_IP"
     else
         # 如果是未来再升级，配置文件已是最新，直接提取变量供安装脚本尾部使用
-        SAFE_PUBLIC_IP=$(grep "^PUBLIC_IP=" "$CONFIG_FILE" | cut -d'"' -f2)
+        # [修复] 避免 cut 提取无引号变量失败，直接复用已 source 的原生变量
+        SAFE_PUBLIC_IP="${PUBLIC_IP}"
     fi
 
     # [v3.5.2 热修复] 兼容老版本没有 NODE_NAME 和 NODE_ALIAS 的情况，无损补齐
@@ -650,7 +642,19 @@ if [ ! -s "${TMP_CORE}/runner.sh" ] || [ ! -s "${TMP_CORE}/agent_daemon.sh" ]; t
     exit 1
 fi
 
-# 校验完美通过，执行原子化交接
+# 🟢 [原子化交接核心]: 校验完美通过，新代码已在本地备妥！
+# 此时再以雷霆手段镇压旧进程，杜绝遗言陷阱与断网变砖的可能！
+echo "⏳ 新引擎校验通过，正在抹杀旧版守护进程..."
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl kill --signal=SIGKILL ip-sentinel-agent-daemon.service >/dev/null 2>&1 || true
+    systemctl stop ip-sentinel-runner.timer ip-sentinel-updater.timer ip-sentinel-report.timer ip-sentinel-agent-daemon.service >/dev/null 2>&1 || true
+fi
+pkill -9 -f "webhook.py" >/dev/null 2>&1 || true
+pkill -9 -f "agent_daemon.sh" >/dev/null 2>&1 || true
+pkill -9 -f "runner.sh" >/dev/null 2>&1 || true
+pkill -9 -f "tg_report.sh" >/dev/null 2>&1 || true
+
+# 执行代码目录的物理替换
 rm -rf "${INSTALL_DIR}/core" 2>/dev/null
 mv "$TMP_CORE" "${INSTALL_DIR}/core"
 chmod +x ${INSTALL_DIR}/core/*.sh
@@ -782,7 +786,9 @@ WantedBy=multi-user.target
 EOF
 
         # [修复竞态]: 提前写入公网 IP 缓存，阻断重复推送
-        echo "$SAFE_PUBLIC_IP" > "${INSTALL_DIR}/core/.last_ip"
+        # 强制使用无参数 curl 裸奔探测，对齐 agent_daemon 的认知，防止双栈机型 IPv4/v6 认知错乱导致重启误报
+        DAEMON_IP=$( (curl -s -m 5 api.ip.sb/ip || curl -s -m 5 ifconfig.me) 2>/dev/null | tr -d '[:space:]' )
+        [ -n "$DAEMON_IP" ] && echo "$DAEMON_IP" > "${INSTALL_DIR}/core/.last_ip" || echo "$(echo "$SAFE_PUBLIC_IP" | tr -d '[]')" > "${INSTALL_DIR}/core/.last_ip"
         
         systemctl daemon-reload
         systemctl enable --now ip-sentinel-report.timer
@@ -870,6 +876,10 @@ EOF
                 # [绝对 UTC 锚点] 统一 UTC 16:00
                 echo "0 16 * * * ${INSTALL_DIR}/core/tg_report.sh >/dev/null 2>&1" >> /tmp/cron_backup
                 echo "$SAFE_PUBLIC_IP" > "${INSTALL_DIR}/core/.last_ip"
+                # [修复竞态]: 提前写入公网 IP 缓存，阻断重复推送
+                # 强制使用无参数 curl 裸奔探测，对齐 agent_daemon 的认知，防止双栈机型 IPv4/v6 认知错乱导致重启误报
+                DAEMON_IP=$( (curl -s -m 5 api.ip.sb/ip || curl -s -m 5 ifconfig.me) 2>/dev/null | tr -d '[:space:]' )
+                [ -n "$DAEMON_IP" ] && echo "$DAEMON_IP" > "${INSTALL_DIR}/core/.last_ip" || echo "$(echo "$SAFE_PUBLIC_IP" | tr -d '[]')" > "${INSTALL_DIR}/core/.last_ip"
                 
                 if command -v rc-update >/dev/null 2>&1 && [ -d "/etc/local.d" ]; then
                     echo "nohup bash ${INSTALL_DIR}/core/agent_daemon.sh >/dev/null 2>&1 &" > /etc/local.d/ip_sentinel.start
