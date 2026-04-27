@@ -1,0 +1,35 @@
+{
+  "region_name": "Nigeria - Lagos",
+  "google_module": {
+    "base_lat": 6.5244,
+    "base_lon": 3.3792,
+    "lang_params": "hl=en-NG&gl=NG",
+    "valid_url_suffix": "com.ng"
+  },
+  "trust_module": {
+    "white_urls": [
+      "https://www.jumia.com.ng/",
+      "https://www.punchng.com/",
+      "https://www.gtbank.com/",
+      "https://guardian.ng/",
+      "https://www.konga.com/",
+      "https://www.firstbanknigeria.com/",
+      "https://www.vanguardngr.com/",
+      "https://www.nairaland.com/",
+      "https://www.airtel.com.ng/",
+      "https://www.mtn.ng/"
+    ],
+    "static_urls": [
+      "https://www.jumia.com.ng/",
+      "https://www.punchng.com/",
+      "https://www.gtbank.com/",
+      "https://guardian.ng/",
+      "https://www.konga.com/",
+      "https://www.firstbanknigeria.com/",
+      "https://www.vanguardngr.com/",
+      "https://www.nairaland.com/",
+      "https://www.airtel.com.ng/",
+      "https://www.mtn.ng/"
+    ]
+  }
+}

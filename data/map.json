@@ -402,6 +402,29 @@
           ]
         }
       ]
+    },
+    {
+      "id": "AFRICA",
+      "name": "非洲战区 (Africa)",
+      "countries": [
+        {
+          "id": "NG",
+          "name": "Nigeria (尼日利亚)",
+          "keyword_file": "kw_NG.txt",
+          "states": [
+            {
+              "id": "Default",
+              "name": "Default State",
+              "cities": [
+                {
+                  "id": "Lagos",
+                  "name": "Lagos (拉各斯)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }
