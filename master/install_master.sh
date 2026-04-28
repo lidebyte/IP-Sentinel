@@ -104,13 +104,8 @@ else
     fi
 fi
 
-# ================== [v3.2.2 优化: 安装前环境纯净度清理与数据保护] ==================
-echo -e "\n⏳ 正在清理旧版 Master 守护进程..."
-# [新增] 优雅停止 Systemd 服务，防止代码替换时引发无限复活风暴
-if command -v systemctl >/dev/null 2>&1; then
-    systemctl stop ip-sentinel-master.service >/dev/null 2>&1 || true
-fi
-pkill -9 -f "tg_master.sh" >/dev/null 2>&1 || true
+# ================== [v3.2.2 优化: 数据纯净度清理与保护] ==================
+echo -e "\n⏳ 正在验证本地环境与数据..."
 
 if [ "$UPGRADE_MODE" == "true" ]; then
     if [ "$KEEP_DB" == "false" ]; then
@@ -119,13 +114,11 @@ if [ "$UPGRADE_MODE" == "true" ]; then
     else
         echo -e "📦 历史节点数据库 (SQLite) 已绝密保留。"
     fi
-    # 删除旧的核心脚本，准备拉取新的
-    rm -f "${MASTER_DIR}/tg_master.sh" 2>/dev/null
+    # [防砖修复] 移除过早的旧进程抹杀与脚本物理删除，防止拉取失败导致司令部变砖失联
 else
     # 焦土政策：如果不是升级模式，直接扬了整个司令部目录
     rm -rf "$MASTER_DIR" 2>/dev/null
 fi
-echo -e "\033[32m✅ 旧进程已肃清！\033[0m"
 # =======================================================================
 
 # 1. 依赖检查与智能安装 (v3.6.0 兼容性与优雅性升级)
@@ -287,10 +280,31 @@ chmod 600 "${MASTER_DIR}/master.conf"
 chmod 600 "$DB_FILE"
 # ====================================================================
 
-# 4. 拉取核心调度代码并运行
-echo -e "\n[4/4] 部署 TG 调度守护进程..."
-# [修改] 剥离了写死的网址，改用顶部的 ${REPO_RAW_URL} 变量，确保与卸载脚本的数据源同源
-curl -sL "${REPO_RAW_URL}/master/tg_master.sh" -o "${MASTER_DIR}/tg_master.sh"
+# 4. 拉取核心调度代码并执行原子化交接
+echo -e "\n[4/4] 正在拉取新版司令部核心引擎..."
+
+TMP_MASTER="/tmp/ip_sentinel_master_core_$$"
+curl -sL "${REPO_RAW_URL}/master/tg_master.sh" -o "$TMP_MASTER"
+
+# 🛡️ 防砖终极校验
+if [ ! -s "$TMP_MASTER" ]; then
+    echo -e "\033[31m❌ 致命错误：中枢核心代码拉取失败！网络阻断或 GitHub Raw 异常。\033[0m"
+    echo "🛡️ 防砖机制触发：已中止覆盖，旧版司令部仍在安全运行中。"
+    rm -f "$TMP_MASTER"
+    exit 1
+fi
+
+# 🟢 [原子化交接核心]: 校验完美通过，新代码已备妥！
+# 以雷霆手段抹杀旧版调度进程，杜绝文件覆写时的并发错乱
+echo "⏳ 新引擎校验通过，正在抹杀旧版守护进程..."
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl kill --signal=SIGKILL ip-sentinel-master.service >/dev/null 2>&1 || true
+    systemctl stop ip-sentinel-master.service >/dev/null 2>&1 || true
+fi
+pkill -9 -f "tg_master.sh" >/dev/null 2>&1 || true
+
+# 执行物理替换
+mv "$TMP_MASTER" "${MASTER_DIR}/tg_master.sh"
 chmod +x "${MASTER_DIR}/tg_master.sh"
 
 if command -v systemctl >/dev/null 2>&1; then

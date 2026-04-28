@@ -38,6 +38,8 @@ fi
 echo "[1/4] 正在停止并删除 Systemd 服务..."
 if command -v systemctl >/dev/null 2>&1; then
     echo "💡 检测到 Systemd 环境，正在抹除 Systemd 服务单元..."
+    # [防死锁修复] 先发送 SIGKILL 瞬间抹杀，防止卡死
+    systemctl kill --signal=SIGKILL ip-sentinel-master.service >/dev/null 2>&1 || true
     systemctl disable --now ip-sentinel-master.service >/dev/null 2>&1
     rm -f /etc/systemd/system/ip-sentinel-master.service
     systemctl daemon-reload
