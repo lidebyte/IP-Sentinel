@@ -85,7 +85,7 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
         
     elif command -v pacman >/dev/null 2>&1; then
         # Arch Linux 系列
-        pacman -Sy --noconfirm curl jq cronie procps-ng python openssl >/dev/null 2>&1
+        pacman -Sy --needed --noconfirm curl jq cronie procps-ng python openssl >/dev/null 2>&1
         mkdir -p /root/.cache/crontab 2>/dev/null
         systemctl enable cronie >/dev/null 2>&1 && systemctl start cronie >/dev/null 2>&1
         
