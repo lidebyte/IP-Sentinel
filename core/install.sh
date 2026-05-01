@@ -84,7 +84,7 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
         service crond start >/dev/null 2>&1
         
     elif command -v pacman >/dev/null 2>&1; then
-        # Arch Linux 系列
+        # Arch Linux 系列 (采用 --needed 防重复，剥离 -y 防部分升级炸系统)
         pacman -S --needed --noconfirm curl jq cronie procps-ng python openssl >/dev/null 2>&1
         mkdir -p /root/.cache/crontab 2>/dev/null
         systemctl enable cronie >/dev/null 2>&1 && systemctl start cronie >/dev/null 2>&1
@@ -96,7 +96,8 @@ if [ ${#MISSING_CMDS[@]} -gt 0 ]; then
         echo -e "  Debian/Ubuntu: \033[36mapt-get update && apt-get install -y --no-install-recommends curl jq cron procps python3 openssl\033[0m"
         echo -e "  CentOS/RHEL:   \033[36myum install -y curl jq cronie procps-ng python3 openssl\033[0m"
         echo -e "  Alpine Linux:  \033[36mapk add --no-cache curl jq cronie procps python3 bash openssl\033[0m"
-        echo -e "  Arch Linux:    \033[36mpacman -Sy curl jq cronie procps-ng python openssl\033[0m"
+        # Arch 用户，如果出问题，应该用 -Syu 进行全系统安全更新
+        echo -e "  Arch Linux:    \033[36mpacman -Syu --needed curl jq cronie procps-ng python openssl\033[0m"
         exit 1
     fi
     
