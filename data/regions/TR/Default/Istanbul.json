@@ -1,1 +1,46 @@
-{ "region_name": "Turkey (Istanbul)", "google_module": { "base_lat": 41.0082, "base_lon": 28.9784, "lang_params": "hl=tr-TR&gl=TR", "valid_url_suffix": "com.tr" }, "trust_module": { "white_urls": [], "static_urls": [ "https://www.turkiye.gov.tr/", "https://www.ziraatbank.com.tr/", "https://www.sahibinden.com/", "https://www.trendyol.com/", "https://www.hepsiburada.com/", "https://www.garantibbva.com.tr/", "https://www.hurriyet.com.tr/", "https://www.milliyet.com.tr/" ] } }
+{
+  "region_name": "Turkey (Istanbul)",
+  "google_module": {
+    "base_lat": 41.0082,
+    "base_lon": 28.9784,
+    "lang_params": "hl=tr-TR&gl=TR",
+    "valid_url_suffix": "com.tr"
+  },
+  "trust_module": {
+    "white_urls": [
+      "https://www.hurriyet.com.tr/kelebek/fakir-hausgerate-ile-lezzetli-tarifler/buharda-sebzeli-tavuk-43163329",
+      "https://www.garantibbva.com.tr/",
+      "https://www.hurriyet.com.tr/kelebek/magazin/onu-bir-nisan-yuzugu-icin-bile-9-yil-bekleten-futbolcu-askina-en-anlamli-mesaji-yolladi-bir-anda-ortaya-telli-duvakli-gelin-43166417",
+      "https://www.hurriyet.com.tr/kelebek/hayat/remostan-turkiye-mesaji-bizi-ayiran-hicbir-sey-yok-43167114",
+      "https://www.hurriyet.com.tr/resmi-ilanlar/kucukcekmece-3-asliye-hukuk-mahkemesi-43167691",
+      "https://www.hurriyet.com.tr/yazarlar/hande-firat/mhp-liderinin-mesajlarinin-perde-arkasi-43167893",
+      "https://www.hepsiburada.com/",
+      "https://www.turkiye.gov.tr/",
+      "https://www.hurriyet.com.tr/yazarlar/fulya-soybas/hantavirus-salgini-olur-mu-yolcu-gemisinde-alarm-3-kisi-oldu-43167869",
+      "https://www.hurriyet.com.tr/kelebek/hayat/erol-kosenin-kizi-mirasini-reddetti-43167100",
+      "https://www.sahibinden.com/",
+      "https://www.hurriyet.com.tr/kelebek/fakir-hausgerate-ile-lezzetli-tarifler/izgara-tavuk-kofte-43163339",
+      "https://www.hurriyet.com.tr/gundem/gayrinizami-harp-fuari-sahanin-5-gozdesi-43167924",
+      "https://www.milliyet.com.tr/",
+      "https://www.trendyol.com/",
+      "https://www.hurriyet.com.tr/",
+      "https://www.ziraatbank.com.tr/",
+      "https://www.hurriyet.com.tr/kelebek/fakir-hausgerate-ile-lezzetli-tarifler/somon-bowl-43163358",
+      "https://www.hurriyet.com.tr/resmi-ilanlar/edirne-1-sulh-hukuk-mahkemesi-hakimligi-43167664",
+      "https://www.hurriyet.com.tr/resmi-ilanlar/antalya-6-sulh-hukuk-mahkemesi-43167712",
+      "https://www.hurriyet.com.tr/gundem/mhpden-samsunda-ilk-adim-43167902",
+      "https://www.hurriyet.com.tr/kelebek/hayat/keske-benzeseydi-dunya-daha-guzel-olurdu-43167940",
+      "https://www.hurriyet.com.tr/kelebek/televizyon/unlu-sarkicinin-eski-kocasi-fena-konustu-oglum-istedigi-kizla-cikabilir-ama-kizima-sevgili-bulma-izni-yok-43167498"
+    ],
+    "static_urls": [
+      "https://www.turkiye.gov.tr/",
+      "https://www.ziraatbank.com.tr/",
+      "https://www.sahibinden.com/",
+      "https://www.trendyol.com/",
+      "https://www.hepsiburada.com/",
+      "https://www.garantibbva.com.tr/",
+      "https://www.hurriyet.com.tr/",
+      "https://www.milliyet.com.tr/"
+    ]
+  }
+}
