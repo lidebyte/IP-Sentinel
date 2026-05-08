@@ -225,6 +225,23 @@
             } 
           ] 
         },
+        { 
+          "id": "SA", 
+          "name": "Saudi Arabia (沙特阿拉伯)", 
+          "keyword_file": "kw_SA.txt", 
+          "states": [
+            { 
+              "id": "Default", 
+              "name": "Default State", 
+              "cities": [
+                { 
+                  "id": "Riyadh", 
+                  "name": "Riyadh (利雅得)" 
+                } 
+              ] 
+            } 
+          ] 
+        },
         {
           "id": "KR",
           "name": "South Korea (韩国)",
