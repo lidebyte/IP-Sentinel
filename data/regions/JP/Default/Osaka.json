@@ -1,0 +1,19 @@
+{
+  "region_name": "Japan (Osaka)",
+  "google_module": {
+    "base_lat": 34.6937,
+    "base_lon": 135.5023,
+    "lang_params": "hl=ja&gl=JP",
+    "valid_url_suffix": "co.jp"
+  },
+  "trust_module": {
+    "white_urls": [],
+    "static_urls": [
+      "https://www.yahoo.co.jp/",
+      "https://www.nhk.or.jp/",
+      "https://www.rakuten.co.jp/",
+      "https://www.japan.go.jp/",
+      "https://www.jnto.go.jp/"
+    ]
+  }
+}
