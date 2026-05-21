@@ -282,20 +282,22 @@ while true; do
                     VER_INFO="当前版本: \`v${MASTER_VERSION}\`"
                     
                     BTN_MASTER_OTA=""
-                    if [ -n "$REMOTE_VER" ] && [ "$REMOTE_VER" != "$MASTER_VERSION" ]; then
-                        VER_INFO="${VER_INFO}\n✨ **发现新版本**: \`v${REMOTE_VER}\` (可执行中枢热重载)"
-                        
-                        # 仅当非官方网关 且 开启了中枢 OTA 权限时，才渲染升级按钮
-                        if [ "$IS_OFFICIAL_GATEWAY" != "true" ] && [ "${ENABLE_MASTER_OTA:-false}" == "true" ]; then
-                            BTN_MASTER_OTA="[{\"text\":\"🆙 升级控制中枢至 v${REMOTE_VER}\",\"callback_data\":\"master_ota_confirm\"}],"
+                    if [ -n "$REMOTE_VER" ]; then
+                        if [ "$REMOTE_VER" != "$MASTER_VERSION" ]; then
+                            # [需要升级] 换行显示最新版本提示
+                            VER_INFO="${VER_INFO}\n✨ **发现新版本**: \`v${REMOTE_VER}\` (可执行中枢热重载)"
+                            
+                            # 仅当非官方网关 且 开启了中枢 OTA 权限时，才渲染升级按钮
+                            if [ "$IS_OFFICIAL_GATEWAY" != "true" ] && [ "${ENABLE_MASTER_OTA:-false}" == "true" ]; then
+                                BTN_MASTER_OTA="[{\"text\":\"🆙 升级控制中枢至 v${REMOTE_VER}\",\"callback_data\":\"master_ota_confirm\"}],"
+                            fi
+                        else
+                            # [已是最新] 不换行，直接在当前版本后追加绿勾状态
+                            VER_INFO="当前版本: \`v${MASTER_VERSION}\` (✅已是最新)"
                         fi
-                    elif [ -n "$REMOTE_VER" ] && [ "$REMOTE_VER" == "$MASTER_VERSION" ]; then
-                        # [UI 体验升级] 若检测到版本一致，明确提示用户已是最新
-                        VER_INFO="${VER_INFO}\n✨ **最新官方版本**: \`v${REMOTE_VER}\` (✅已是最新)"
                     fi
 
                     NODE_COUNT=$(db_exec "SELECT COUNT(*) FROM nodes WHERE chat_id='$CHAT_ID';")
-                    [ -z "$NODE_COUNT" ] && NODE_COUNT=0
 
                     # L0 扁平化重构：升级按钮置顶，底部追加带有 url 属性的 GitHub 引流按钮
                     if [ "$IS_OFFICIAL_GATEWAY" != "true" ]; then
