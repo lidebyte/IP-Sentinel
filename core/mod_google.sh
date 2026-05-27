@@ -336,10 +336,19 @@ for ((i=1; i<=TOTAL_ACTIONS; i++)); do
     fi
 done
 
-# --- [结果纠偏自检 (V4.1.1 终极三核雷达: URL跳转 + Premium + Music)] ---
+# ==========================================================
+# Google / YouTube 区域判定逻辑
+# 三核探针:
+#   1. Google 跳转域
+#   2. YouTube Premium
+#   3. YouTube Music
+# ==========================================================
+
 log "$MODULE_NAME" "INFO " "启动三核交叉验证 (URL跳转 + YT Premium + YT Music) 穿透获取 GeoIP..."
 
-# 核心 1: 传统 URL 跳转探测 (数组安全传参 + 剥离 -f)
+# ----------------------------------------------------------
+# 核心 1: Google 跳转探针
+# ----------------------------------------------------------
 JUMP_HDR=$(curl -sI -m 10 --http2 \
     $DYNAMIC_IP_PREF \
     ${CURL_BIND_OPT[@]:+"${CURL_BIND_OPT[@]}"} \
@@ -347,33 +356,73 @@ JUMP_HDR=$(curl -sI -m 10 --http2 \
     -A "$SESSION_UA" \
     -H "Accept-Language: ${LANG_ACCEPT}" \
     "http://www.google.com/")
+
 JUMP_LOC=$(echo "$JUMP_HDR" | grep -i "^location:" | tr -d '\r\n')
 JUMP_GL=""
 
 if [ -z "$JUMP_LOC" ]; then
+    # 没跳转，默认 Google 原生 US
     JUMP_GL="US"
+
 elif [[ "$JUMP_LOC" == *".google.cn"* ]] || [[ "$JUMP_LOC" == *"gl=CN"* ]]; then
+    # 明确送中
     JUMP_GL="CN"
+
 elif [[ "$JUMP_LOC" == *"gl="* ]]; then
-    JUMP_GL=$(echo "$JUMP_LOC" | grep -o 'gl=[A-Za-z]\{2\}' | head -n 1 | cut -d'=' -f2 | tr 'a-z' 'A-Z')
+    # URL 参数直接带 gl=
+    JUMP_GL=$(echo "$JUMP_LOC" \
+        | grep -o 'gl=[A-Za-z]\{2\}' \
+        | head -n 1 \
+        | cut -d'=' -f2 \
+        | tr 'a-z' 'A-Z')
+
 else
-    JUMP_DOMAIN=$(echo "$JUMP_LOC" | grep -o 'google\.[a-z\.]*' | head -n 1 | sed 's/google\.//')
+    # 域名后缀解析
+    JUMP_DOMAIN=$(echo "$JUMP_LOC" \
+        | grep -o 'google\.[a-z\.]*' \
+        | head -n 1 \
+        | sed 's/google\.//')
+
     case "$JUMP_DOMAIN" in
-        "com") JUMP_GL="US" ;; "com.hk") JUMP_GL="HK" ;; "com.tw") JUMP_GL="TW" ;;
-        "co.jp") JUMP_GL="JP" ;; "co.uk") JUMP_GL="GB" ;; "co.kr") JUMP_GL="KR" ;;
-        "co.in") JUMP_GL="IN" ;; "co.id") JUMP_GL="ID" ;; "co.th") JUMP_GL="TH" ;;
-        "com.sg") JUMP_GL="SG" ;; "com.my") JUMP_GL="MY" ;; "com.au") JUMP_GL="AU" ;;
-        "com.br") JUMP_GL="BR" ;; "com.mx") JUMP_GL="MX" ;; "com.ar") JUMP_GL="AR" ;;
-        "co.za") JUMP_GL="ZA" ;; "cn") JUMP_GL="CN" ;; "") JUMP_GL="" ;;
-        *) 
-            LAST_EXT=$(echo "$JUMP_DOMAIN" | awk -F'.' '{print $NF}' | tr 'a-z' 'A-Z')
-            if [ ${#LAST_EXT} -eq 2 ]; then JUMP_GL="$LAST_EXT"; else JUMP_GL="US"; fi
+        "com")    JUMP_GL="US" ;;
+        "com.hk") JUMP_GL="HK" ;;
+        "com.tw") JUMP_GL="TW" ;;
+        "co.jp")  JUMP_GL="JP" ;;
+        "co.uk")  JUMP_GL="GB" ;;
+        "co.kr")  JUMP_GL="KR" ;;
+        "co.in")  JUMP_GL="IN" ;;
+        "co.id")  JUMP_GL="ID" ;;
+        "co.th")  JUMP_GL="TH" ;;
+        "com.sg") JUMP_GL="SG" ;;
+        "com.my") JUMP_GL="MY" ;;
+        "com.au") JUMP_GL="AU" ;;
+        "com.br") JUMP_GL="BR" ;;
+        "com.mx") JUMP_GL="MX" ;;
+        "com.ar") JUMP_GL="AR" ;;
+        "co.za")  JUMP_GL="ZA" ;;
+        "cn")     JUMP_GL="CN" ;;
+        "")
+            JUMP_GL=""
+            ;;
+        *)
+            LAST_EXT=$(echo "$JUMP_DOMAIN" \
+                | awk -F'.' '{print $NF}' \
+                | tr 'a-z' 'A-Z')
+
+            if [ ${#LAST_EXT} -eq 2 ]; then
+                JUMP_GL="$LAST_EXT"
+            else
+                JUMP_GL="US"
+            fi
             ;;
     esac
 fi
 
-# 核心 2: YouTube Premium 探测
+# ----------------------------------------------------------
+# 核心 2: YouTube Premium 探针
+# ----------------------------------------------------------
 YT_PR_GL=""
+
 YT_PR_HTML=$(curl -sSL -m 10 --http2 \
     $DYNAMIC_IP_PREF \
     ${CURL_BIND_OPT[@]:+"${CURL_BIND_OPT[@]}"} \
@@ -381,16 +430,39 @@ YT_PR_HTML=$(curl -sSL -m 10 --http2 \
     -A "$SESSION_UA" \
     -H "Accept-Language: ${LANG_ACCEPT}" \
     "https://www.youtube.com/premium")
+
 if [[ "$YT_PR_HTML" == *"www.google.cn"* ]]; then
+
     YT_PR_GL="CN"
+
 else
-    YT_PR_GL=$(echo "$YT_PR_HTML" | grep -o '"contentRegion":"[A-Za-z]\{2\}"' | head -n 1 | cut -d'"' -f4 | tr 'a-z' 'A-Z')
-    [ -z "$YT_PR_GL" ] && YT_PR_GL=$(echo "$YT_PR_HTML" | grep -o '"countryCode":"[A-Za-z]\{2\}"' | head -n 1 | cut -d'"' -f4 | tr 'a-z' 'A-Z')
-    [ -z "$YT_PR_GL" ] && YT_PR_GL=$(echo "$YT_PR_HTML" | grep -o '"INNERTUBE_CONTEXT_GL":"[A-Za-z]\{2\}"' | head -n 1 | cut -d'"' -f4 | tr 'a-z' 'A-Z')
+
+    YT_PR_GL=$(echo "$YT_PR_HTML" \
+        | grep -o '"contentRegion":"[A-Za-z]\{2\}"' \
+        | head -n 1 \
+        | cut -d'"' -f4 \
+        | tr 'a-z' 'A-Z')
+
+    [ -z "$YT_PR_GL" ] && \
+    YT_PR_GL=$(echo "$YT_PR_HTML" \
+        | grep -o '"countryCode":"[A-Za-z]\{2\}"' \
+        | head -n 1 \
+        | cut -d'"' -f4 \
+        | tr 'a-z' 'A-Z')
+
+    [ -z "$YT_PR_GL" ] && \
+    YT_PR_GL=$(echo "$YT_PR_HTML" \
+        | grep -o '"INNERTUBE_CONTEXT_GL":"[A-Za-z]\{2\}"' \
+        | head -n 1 \
+        | cut -d'"' -f4 \
+        | tr 'a-z' 'A-Z')
 fi
 
-# 核心 3: YouTube Music 探测
+# ----------------------------------------------------------
+# 核心 3: YouTube Music 探针
+# ----------------------------------------------------------
 YT_MU_GL=""
+
 YT_MU_HTML=$(curl -sSL -m 10 --http2 \
     $DYNAMIC_IP_PREF \
     ${CURL_BIND_OPT[@]:+"${CURL_BIND_OPT[@]}"} \
@@ -398,48 +470,113 @@ YT_MU_HTML=$(curl -sSL -m 10 --http2 \
     -A "$SESSION_UA" \
     -H "Accept-Language: ${LANG_ACCEPT}" \
     "https://music.youtube.com/")
+
 if [[ "$YT_MU_HTML" == *"www.google.cn"* ]]; then
+
     YT_MU_GL="CN"
+
 else
-    YT_MU_GL=$(echo "$YT_MU_HTML" | grep -o '"INNERTUBE_CONTEXT_GL":"[A-Za-z]\{2\}"' | head -n 1 | cut -d'"' -f4 | tr 'a-z' 'A-Z')
-    [ -z "$YT_MU_GL" ] && YT_MU_GL=$(echo "$YT_MU_HTML" | grep -o '"countryCode":"[A-Za-z]\{2\}"' | head -n 1 | cut -d'"' -f4 | tr 'a-z' 'A-Z')
-    [ -z "$YT_MU_GL" ] && YT_MU_GL=$(echo "$YT_MU_HTML" | grep -o '"GL":"[A-Za-z]\{2\}"' | head -n 1 | cut -d'"' -f4 | tr 'a-z' 'A-Z')
+
+    YT_MU_GL=$(echo "$YT_MU_HTML" \
+        | grep -o '"INNERTUBE_CONTEXT_GL":"[A-Za-z]\{2\}"' \
+        | head -n 1 \
+        | cut -d'"' -f4 \
+        | tr 'a-z' 'A-Z')
+
+    [ -z "$YT_MU_GL" ] && \
+    YT_MU_GL=$(echo "$YT_MU_HTML" \
+        | grep -o '"countryCode":"[A-Za-z]\{2\}"' \
+        | head -n 1 \
+        | cut -d'"' -f4 \
+        | tr 'a-z' 'A-Z')
+
+    [ -z "$YT_MU_GL" ] && \
+    YT_MU_GL=$(echo "$YT_MU_HTML" \
+        | grep -o '"GL":"[A-Za-z]\{2\}"' \
+        | head -n 1 \
+        | cut -d'"' -f4 \
+        | tr 'a-z' 'A-Z')
 fi
 
-# [基准对齐] 提取配置大区 (兼容州级穿透)，并修正英国的 ISO 代码
+# ----------------------------------------------------------
+# 目标区域标准化
+# ----------------------------------------------------------
 TARGET_CC="${REGION_CODE%%-*}"
+
+# 英国 ISO 特判
 [ "$TARGET_CC" == "UK" ] && TARGET_CC="GB"
 
-# --- 终极审判逻辑 ---
+# ----------------------------------------------------------
+# 终极审判逻辑
+# ----------------------------------------------------------
 IS_CN=0
 VALID_PROBES=0
+
 for val in "$JUMP_GL" "$YT_PR_GL" "$YT_MU_GL"; do
     if [ -n "$val" ]; then
         ((VALID_PROBES++))
+
+        # 任意探针命中 CN -> 一票否决
         [ "$val" == "CN" ] && IS_CN=1
     fi
 done
 
+# ----------------------------------------------------------
+# 三核全部失效
+# ----------------------------------------------------------
 if [ $VALID_PROBES -eq 0 ]; then
+
     STATUS="🚨 探针失效 (三核全部熔断，可能遭严重风控拦截)"
+
+# ----------------------------------------------------------
+# 送中判定
+# ----------------------------------------------------------
 elif [ $IS_CN -eq 1 ]; then
+
     STATUS="❌ 严重高危！三核雷达判定 IP 已被中国大陆锁定 (送中)！"
+
+# ----------------------------------------------------------
+# 非送中 -> 判断是否区域达标
+# ----------------------------------------------------------
 else
+
     YT_MATCH=0
+
+    # Premium 命中目标区域
     [ "$YT_PR_GL" == "$TARGET_CC" ] && YT_MATCH=1
+
+    # Music 命中目标区域
     [ "$YT_MU_GL" == "$TARGET_CC" ] && YT_MATCH=1
 
+    # ------------------------------------------------------
+    # YT 主业务达标
+    # ------------------------------------------------------
     if [ $YT_MATCH -eq 1 ]; then
+
+        # Jump 雷达漂移
         if [ -n "$JUMP_GL" ] && [ "$JUMP_GL" != "$TARGET_CC" ]; then
+
             STATUS="✅ 目标区域达成 (YT主导成功, Jump副雷达漂移至 ${JUMP_GL}) | Prem: ${YT_PR_GL:-无} | Music: ${YT_MU_GL:-无}"
+
         else
-            STATUS="✅ 目标区域达成 (Jump: ${JUMP_GL:-无} | Prem: ${YT_PR_GL:-无} | Music: ${YT_MU_GL:-无})"
+
+            STATUS="✅ 目标区域达成 (Jump: ${JUMP_GL:-无} | Prem: ${YT_PR_GL:-无} | Music: ${YT_MU_GL:-无}"
+
         fi
+
+    # ------------------------------------------------------
+    # 核心业务未达标
+    # ------------------------------------------------------
     else
+
         STATUS="⚠️ 区域发生漂移！目标 $TARGET_CC，实际 (Jump: ${JUMP_GL:-无} | Prem: ${YT_PR_GL:-无} | Music: ${YT_MU_GL:-无})"
+
     fi
 fi
 
+# ----------------------------------------------------------
+# 输出最终结果
+# ----------------------------------------------------------
 log "$MODULE_NAME" "SCORE" "自检结论: $STATUS"
 
 # [V4.1.1] 定期清理 Cookie 垃圾防爆栈 (清理超过 14 天的 Cookie)
