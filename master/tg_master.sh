@@ -92,8 +92,9 @@ call_agent() {
     local suffix="$4"
     local res="FAILED"
     
-    # 拆解下划线分隔的 IP 列阵 (例如: [2a0b...]_66.181.x.x)
-    IFS='_' read -r -a ip_array <<< "$ips"
+    # 将长串中的下划线统一洗回逗号，确保万无一失的弹匣拆解
+    local clean_ips=$(echo "$ips" | tr '_' ',')
+    IFS=',' read -r -a ip_array <<< "$clean_ips"
     for ip in "${ip_array[@]}"; do
         if [ -n "$ip" ]; then
             local url=$(generate_signed_url "$ip" "$port" "$path")
@@ -244,7 +245,7 @@ while true; do
                 CHAT_ID=$(echo "$CHAT_ID" | tr -cd '0-9-')
                 AGENT_REGION=$(echo "$RAW_REGION" | tr -cd 'a-zA-Z0-9' | cut -c 1-10)
                 NODE_NAME=$(echo "$RAW_NODE" | tr -cd 'a-zA-Z0-9_.-' | cut -c 1-30)
-                AGENT_IP=$(echo "$RAW_IP" | tr -cd 'a-zA-Z0-9.:\[\]-' | cut -c 1-50)
+                AGENT_IP=$(echo "$RAW_IP" | tr -cd 'a-zA-Z0-9.:\[\]-_,' | cut -c 1-150)
                 AGENT_PORT=$(echo "$RAW_PORT" | tr -cd '0-9' | cut -c 1-5)
                 NODE_ALIAS=$(echo "$RAW_ALIAS" | tr -d '"'\''\`\$\|&;<>\n\r' | cut -c 1-30)
                 [ -z "$NODE_ALIAS" ] && NODE_ALIAS="$NODE_NAME"
@@ -265,9 +266,10 @@ while true; do
                 # [v4.2.2 容灾对齐] 允许 agent_ip 字段以逗号分隔的形式完整固化多路由通道
                 db_exec "INSERT INTO nodes (chat_id, node_name, agent_ip, agent_port, last_seen, region, node_alias, enable_ota) VALUES ('$CHAT_ID', '$NODE_NAME', '$AGENT_IP', '$AGENT_PORT', CURRENT_TIMESTAMP, '$AGENT_REGION', '$NODE_ALIAS', '$AGENT_OTA') ON CONFLICT(chat_id, node_name) DO UPDATE SET agent_ip='$AGENT_IP', agent_port='$AGENT_PORT', last_seen=CURRENT_TIMESTAMP, region='$AGENT_REGION', node_alias='$NODE_ALIAS', enable_ota='$AGENT_OTA';"
                 
-                # 动态人性化回执：在 TG 侧清晰地向管理者展示主备双通道的录入态势
-                MAIN_SHOW_IP=$(echo "$AGENT_IP" | cut -d'_' -f1)
-                BACKUP_SHOW_IP=$(echo "$AGENT_IP" | cut -d'_' -f2-)
+                # 统一将下划线替换为逗号，再进行格式化输出，兼容您的所有测试版本
+                FMT_AGENT_IP=$(echo "$AGENT_IP" | tr '_' ',')
+                MAIN_SHOW_IP=$(echo "$FMT_AGENT_IP" | cut -d',' -f1)
+                BACKUP_SHOW_IP=$(echo "$FMT_AGENT_IP" | cut -d',' -f2-)
                 if [ -n "$BACKUP_SHOW_IP" ]; then
                     SHOW_MSG="✅ **司令部确认 (v${MASTER_VERSION})**%0A节点 \`${NODE_ALIAS}\` 档案已录入！%0A🌐 主通讯：\`${MAIN_SHOW_IP}\`%0A📡 容灾备用：\`${BACKUP_SHOW_IP}\`"
                 else
