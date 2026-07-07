@@ -5,7 +5,6 @@ on:
     - cron: '0 0 * * *' # 每天 UTC 零点自动触发执行
   workflow_dispatch: # 允许您在 GitHub 网页上手动点击运行
 
-# 👇 [核心修复] 显式向 GitHub 申请对代码库的写入权限
 permissions:
   contents: write
 
@@ -16,22 +15,69 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Fetch Star History SVG (Dual Engine)
+      - name: Generate Star History SVG (Pure Local)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mkdir -p data
-          echo "🚀 [Action] 正在尝试从主引擎拉取星标趋势图..."
-          HTTP_CODE=$(curl -sL -w "%{http_code}" "https://api.star-history.com/svg?repos=${{ github.repository }}&type=Date" -o data/star_history.svg)
+          echo "🚀 初始化 Python 虚拟环境与画图引擎..."
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install matplotlib requests
           
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "⚠️ [Warning] 主引擎响应异常 (HTTP $HTTP_CODE)！正在无缝切换至备用引擎..."
-            curl -sL "https://stars.medv.io/${{ github.repository }}.svg" -o data/star_history.svg
-          fi
-          echo "✅ [Success] 星标趋势图拉取完毕！"
+          echo "📊 正在从 GitHub 官方接口拉取星标数据并渲染 SVG..."
+          python3 - <<'PYEOF'
+          import requests, os
+          import matplotlib.pyplot as plt
+          import matplotlib.dates as mdates
+          from datetime import datetime
+
+          token = os.environ['GITHUB_TOKEN']
+          repo = '${{ github.repository }}'
+          headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github.v3.star+json'}
+          url = f'https://api.github.com/repos/{repo}/stargazers?per_page=100'
+          dates = []
+
+          while url:
+              r = requests.get(url, headers=headers)
+              if r.status_code != 200:
+                  print(f"API Error: {r.status_code} - {r.text}")
+                  break
+              data = r.json()
+              if not data:
+                  break
+              for star in data:
+                  if 'starred_at' in star:
+                      dates.append(datetime.strptime(star['starred_at'], '%Y-%m-%dT%H:%M:%SZ'))
+              url = r.links.get('next', {}).get('url')
+
+          if dates:
+              dates.sort()
+              counts = list(range(1, len(dates) + 1))
+              # 延长折线到当前时间
+              dates.append(datetime.utcnow())
+              counts.append(counts[-1])
+              
+              plt.figure(figsize=(10, 5))
+              plt.plot(dates, counts, color='#2ea44f', linewidth=2)
+              plt.fill_between(dates, counts, color='#2ea44f', alpha=0.1)
+              plt.title(f'{repo} Star History', fontsize=16)
+              plt.ylabel('Stars', fontsize=12)
+              plt.grid(True, linestyle='--', alpha=0.6)
+              plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+              plt.gcf().autofmt_xdate()
+              plt.tight_layout()
+              
+              os.makedirs('data', exist_ok=True)
+              plt.savefig('data/star_history.svg', format='svg', transparent=True)
+              print("✅ [Success] 原生 SVG 图表渲染完毕！")
+          else:
+              print("⚠️ [Warning] 暂无 Star 数据或获取失败。")
+          PYEOF
 
       - name: Commit & Push Changes
         run: |
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/star_history.svg
-          git commit -m "chore: 自动化更新 Star 趋势图 (Native Curl 双擎版)" || exit 0
+          git commit -m "chore: 部署纯本地 Python 渲染引擎，彻底摆脱 502 梦魇" || exit 0
           git push origin main
