@@ -129,7 +129,13 @@ do_handle_menu() {
             REG_MSG="#REGISTER#|${REGION_CODE}|${NODE_NAME}|${COMM_IP}|${AGENT_PORT}|${NODE_ALIAS}|${ENABLE_OTA}"
 
             echo -e "\n📤 正在向 Telegram 推送注册指令..."
-            TEXT_MSG="✨ *IP-Sentinel 重新发送注册指令！*\n📍 节点：\`${NODE_ALIAS}\`\n🌐 通讯弹匣：\`${COMM_IP}\`\n🔌 端口：\`${AGENT_PORT}\`\n\n🔑 *请点击下方指令复制并回复给机器人：*\n\`${REG_MSG}\`"
+            TEXT_MSG="✨ *IP-Sentinel 重新发送注册指令！*
+📍 节点：\`${NODE_ALIAS}\`
+🌐 通讯弹匣：\`${COMM_IP}\`
+🔌 端口：\`${AGENT_PORT}\`
+
+🔑 *请点击下方指令复制并回复给机器人：*
+\`${REG_MSG}\`"
 
             # 确定API URL
             if [ "$TG_TOKEN" == "OFFICIAL_GATEWAY_MODE" ]; then
