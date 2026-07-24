@@ -24,7 +24,8 @@ do_handle_menu() {
         echo -e "\n请选择操作:"
         echo "  1) 🚀 部署边缘节点 (进入全球节点配置)"
         echo "  2) 🗑️ 一键卸载 IP-Sentinel"
-        read -p "请输入选择 [1-2] (默认1): " ACTION_CHOICE
+        echo "  3) 📡 重新发送注册指令"
+        read -p "请输入选择 [1-3] (默认1): " ACTION_CHOICE
 
         ACTION_CHOICE=${ACTION_CHOICE:-1}
 
@@ -34,6 +35,129 @@ do_handle_menu() {
             chmod +x "${SECURE_TMP}/ip_uninstall.sh"
             bash "${SECURE_TMP}/ip_uninstall.sh"
             rm -f "${SECURE_TMP}/ip_uninstall.sh"
+            exit 0
+        fi
+
+        # [重新注册] 读取已有配置，重新组装并推送注册指令
+        if [ "$ACTION_CHOICE" == "3" ]; then
+            echo -e "\n📡 [重新注册] 正在读取本地配置..."
+
+            if [ ! -f "$CONFIG_FILE" ]; then
+                echo -e "\033[31m❌ 未检测到配置文件 (${CONFIG_FILE})，无法执行重新注册。\033[0m"
+                echo -e "💡 请先完成一次正常部署后再使用此功能。"
+                exit 1
+            fi
+
+            source "$CONFIG_FILE"
+
+            # 校验关键字段
+            MISSING_FIELDS=()
+            [ -z "$TG_TOKEN" ] && MISSING_FIELDS+=("TG_TOKEN")
+            [ -z "$CHAT_ID" ] && MISSING_FIELDS+=("CHAT_ID")
+            [ -z "$NODE_NAME" ] && MISSING_FIELDS+=("NODE_NAME")
+            [ -z "$COMM_IP" ] && MISSING_FIELDS+=("COMM_IP")
+            [ -z "$AGENT_PORT" ] && MISSING_FIELDS+=("AGENT_PORT")
+
+            if [ ${#MISSING_FIELDS[@]} -gt 0 ]; then
+                echo -e "\033[31m❌ 配置不完整，缺少字段: ${MISSING_FIELDS[*]}\033[0m"
+                echo -e "💡 配置文件可能已损坏，请重新部署。"
+                exit 1
+            fi
+
+            # 补齐可能缺失的字段
+            NODE_ALIAS="${NODE_ALIAS:-$NODE_NAME}"
+            ENABLE_OTA="${ENABLE_OTA:-false}"
+            REGION_CODE="${REGION_CODE:-unknown}"
+
+            echo -e "📋 当前配置信息:"
+            echo -e "   节点名称 : ${NODE_NAME}"
+            echo -e "   节点别名 : ${NODE_ALIAS}"
+            echo -e "   通讯弹匣 : ${COMM_IP}"
+            echo -e "   监听端口 : ${AGENT_PORT}"
+            echo -e "   OTA权限  : ${ENABLE_OTA}"
+
+            # 重新探测当前公网IP，对比COMM_IP
+            echo -e "\n🕵️ 正在探测当前公网出口..."
+            RAW_CUR_V4=$( (curl -4 -s -m 3 api.ip.sb/ip || curl -4 -s -m 3 ifconfig.me) 2>/dev/null | grep -E "^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | head -n 1 | tr -d '[:space:]')
+            RAW_CUR_V6=$( (curl -6 -s -m 3 api.ip.sb/ip || curl -6 -s -m 3 ipv6.icanhazip.com) 2>/dev/null | grep -E "^[0-9a-fA-F:]+.*:" | head -n 1 | tr -d '[:space:]')
+
+            # 过滤WARP等异常出口
+            V4_DEV=$(ip route get 8.8.8.8 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}' | head -n 1)
+            if [[ "$V4_DEV" =~ ^(warp|wgcf|tun|tap|docker|br-|lo) ]] || [[ "$RAW_CUR_V4" =~ ^104\.28\. ]]; then
+                RAW_CUR_V4=""
+            fi
+
+            V6_DEV=$(ip -6 route get 2001:4860:4860::8888 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="dev") print $(i+1)}' | head -n 1)
+            if [[ "$V6_DEV" =~ ^(warp|wgcf|tun|tap|docker|br-|lo) ]]; then
+                RAW_CUR_V6=""
+            fi
+
+            # 组装新的通讯弹匣
+            NEW_COMM_IP=""
+            if [ -n "$RAW_CUR_V4" ]; then
+                NEW_COMM_IP="$RAW_CUR_V4"
+            fi
+            if [ -n "$RAW_CUR_V6" ]; then
+                SAFE_CUR_V6="${RAW_CUR_V6}"
+                [[ "$SAFE_CUR_V6" != *"["* ]] && SAFE_CUR_V6="[${SAFE_CUR_V6}]"
+                if [ -z "$NEW_COMM_IP" ]; then
+                    NEW_COMM_IP="$SAFE_CUR_V6"
+                else
+                    NEW_COMM_IP="${NEW_COMM_IP}_${SAFE_CUR_V6}"
+                fi
+            fi
+
+            # 对比IP是否变化
+            if [ -n "$NEW_COMM_IP" ] && [ "$NEW_COMM_IP" != "$COMM_IP" ]; then
+                echo -e "\033[33m⚠️ 检测到通讯IP已变更！\033[0m"
+                echo -e "   旧弹匣 : ${COMM_IP}"
+                echo -e "   新弹匣 : ${NEW_COMM_IP}"
+                read -p "👉 是否使用新的通讯弹匣重新注册？(y/n, 默认y): " IP_CHANGE_CHOICE
+                if [[ "$IP_CHANGE_CHOICE" =~ ^[Nn]$ ]]; then
+                    echo -e "🔄 已保留原通讯弹匣: ${COMM_IP}"
+                else
+                    COMM_IP="$NEW_COMM_IP"
+                    echo -e "\033[32m✅ 已更新通讯弹匣: ${COMM_IP}\033[0m"
+                fi
+            elif [ -z "$NEW_COMM_IP" ]; then
+                echo -e "\033[33m⚠️ 未能自动探测到公网IP，将使用配置中的通讯弹匣: ${COMM_IP}\033[0m"
+            else
+                echo -e "\033[32m✅ 通讯IP未变化，继续使用: ${COMM_IP}\033[0m"
+            fi
+
+            # 组装注册指令
+            REG_MSG="#REGISTER#|${REGION_CODE}|${NODE_NAME}|${COMM_IP}|${AGENT_PORT}|${NODE_ALIAS}|${ENABLE_OTA}"
+
+            echo -e "\n📤 正在向 Telegram 推送注册指令..."
+            TEXT_MSG="✨ *IP-Sentinel 重新发送注册指令！*\n📍 节点：\`${NODE_ALIAS}\`\n🌐 通讯弹匣：\`${COMM_IP}\`\n🔌 端口：\`${AGENT_PORT}\`\n\n🔑 *请点击下方指令复制并回复给机器人：*\n\`${REG_MSG}\`"
+
+            # 确定API URL
+            if [ "$TG_TOKEN" == "OFFICIAL_GATEWAY_MODE" ]; then
+                TG_API_URL="https://omni-gateway.samanthaestime296.workers.dev"
+            else
+                TG_API_URL="https://api.telegram.org/bot${TG_TOKEN}/sendMessage"
+            fi
+
+            JSON_PAYLOAD=$(jq -n --arg cid "$CHAT_ID" --arg txt "$TEXT_MSG" --arg cb "manage:${NODE_NAME}" '{chat_id: $cid, text: $txt, parse_mode: "Markdown", reply_markup: {inline_keyboard: [[{text: "⚙️ 调出该节点控制台", callback_data: $cb}]]}}')
+            PUSH_RESULT=$(curl -s -X POST "${TG_API_URL}" -H "Content-Type: application/json" -d "$JSON_PAYLOAD")
+
+            if echo "$PUSH_RESULT" | grep -q '"ok":true'; then
+                echo -e "\033[32m✅ 注册指令已成功推送到您的 Telegram！\033[0m"
+                echo -e "👉 请前往 Telegram 复制注册指令并回复给机器人完成重新注册。"
+            else
+                echo -e "\033[31m❌ 消息推送失败！\033[0m"
+                echo -e "   响应: $(echo "$PUSH_RESULT" | head -c 200)"
+                echo -e "\n💡 请检查:"
+                echo -e "   1. Chat ID 是否正确"
+                echo -e "   2. Bot Token 是否有效"
+                echo -e "   3. 网络是否正常"
+                exit 1
+            fi
+
+            echo -e "\n========================================================"
+            echo -e "📡 重新注册指令发送完成！"
+            echo -e "⚠️ 此操作未修改任何本地文件或运行中的服务。"
+            echo -e "========================================================\n"
             exit 0
         fi
 
